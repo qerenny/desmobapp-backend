@@ -6,8 +6,8 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Feature, FeatureLink, Room, Seat, Venue
 from app.db.enums import VenueStatus
+from app.db.models import Feature, FeatureLink, Room, Seat, Venue
 from app.schemas.space import (
     GeoPoint,
     RoomBrief,

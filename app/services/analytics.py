@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +16,8 @@ async def get_occupancy_analytics(
     start_date: date,
     end_date: date,
 ) -> OccupancyAnalyticsResponse:
-    period_start = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
-    period_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
+    period_start = datetime.combine(start_date, time.min, tzinfo=UTC)
+    period_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=UTC)
 
     bookings = (
         await session.scalars(

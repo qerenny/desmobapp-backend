@@ -13,7 +13,16 @@ from app.db.models.access import (
 from app.db.models.booking import Booking, BookingEvent, Checkin, Hold, QRCode
 from app.db.models.notification import Notification, NotificationDevice, NotificationPreference
 from app.db.models.payment import Transaction
-from app.db.models.space import BookingRule, Feature, FeatureLink, Room, RoomHour, Seat, Tariff, Venue
+from app.db.models.space import (
+    BookingRule,
+    Feature,
+    FeatureLink,
+    Room,
+    RoomHour,
+    Seat,
+    Tariff,
+    Venue,
+)
 
 __all__ = [
     "AuditLog",

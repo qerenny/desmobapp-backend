@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -56,7 +56,7 @@ async def create_checkin(
         lat=payload.lat,
         lon=payload.lon,
         notes=payload.qrCode if payload.method == CheckinMethod.QR else None,
-        checked_in_at=datetime.now(timezone.utc),
+        checked_in_at=datetime.now(UTC),
     )
     booking.status = BookingStatus.CHECKED_IN
     session.add(checkin)

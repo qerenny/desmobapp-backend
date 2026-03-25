@@ -9,7 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies.auth import get_current_user, require_permissions
 from app.db.models import User
 from app.db.session import get_db_session
-from app.schemas.space import RoomBrief, RoomFull, RoomLayoutUpdate, SeatBrief, VenueCreate, VenueFull, VenueListItem
+from app.schemas.space import (
+    RoomBrief,
+    RoomFull,
+    RoomLayoutUpdate,
+    SeatBrief,
+    VenueCreate,
+    VenueFull,
+    VenueListItem,
+)
 from app.services.space import (
     SpaceNotFoundError,
     create_venue,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from uuid import uuid4
 
 import pytest
@@ -9,7 +9,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.enums import HoldStatus, VenueStatus
-from app.db.models import Booking, BookingRule, Hold, NotificationPreference, Role, Room, RoomHour, Seat, User, UserRoleAssignment, Venue
+from app.db.models import (
+    Booking,
+    BookingRule,
+    Hold,
+    NotificationPreference,
+    Role,
+    Room,
+    RoomHour,
+    Seat,
+    User,
+    UserRoleAssignment,
+    Venue,
+)
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -116,8 +128,8 @@ async def test_booking_flow_checkin_payment_notifications_and_analytics(
     admin_headers = {"Authorization": f"Bearer {admin_login['accessToken']}"}
 
     target_date = date(2026, 3, 30)
-    start_time = datetime(2026, 3, 30, 7, 0, tzinfo=timezone.utc)
-    end_time = datetime(2026, 3, 30, 8, 0, tzinfo=timezone.utc)
+    start_time = datetime(2026, 3, 30, 7, 0, tzinfo=UTC)
+    end_time = datetime(2026, 3, 30, 8, 0, tzinfo=UTC)
 
     availability_response = await client.get(
         "/availability",

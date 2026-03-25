@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import jwt
 from pwdlib import PasswordHash
@@ -28,7 +28,7 @@ def build_access_token(
     venue_roles: dict[str, list[str]] | None = None,
     permissions: list[str] | None = None,
 ) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": user_id,
         "email": email,

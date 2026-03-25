@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.db.enums import NotificationChannel, NotificationStatus
-from app.db.mixins import TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.mixins import UUIDPrimaryKeyMixin
 
 
 class NotificationPreference(Base):

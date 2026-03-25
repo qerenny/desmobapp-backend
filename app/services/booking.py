@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -11,7 +11,6 @@ from app.db.enums import BookingStatus, HoldStatus
 from app.db.models import Booking, Hold, User
 from app.schemas.booking import BookingCreateRequest, BookingResponse
 from app.services.availability import (
-    AvailabilityNotFoundError,
     AvailabilityValidationError,
     _load_conflicts,
     _overlaps,
@@ -32,7 +31,7 @@ class BookingNotFoundError(Exception):
 def _ensure_utc(value: datetime, *, field_name: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise AvailabilityValidationError(f"{field_name} must include timezone information.")
-    return value.astimezone(timezone.utc)
+    return value.astimezone(UTC)
 
 
 def _serialize_booking(booking: Booking) -> BookingResponse:
@@ -62,7 +61,7 @@ async def _validate_booking_window(
     start_time: datetime,
     end_time: datetime,
 ) -> tuple[int, int, bool]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if end_time <= start_time:
         raise AvailabilityValidationError("endTime must be greater than startTime.")
     if start_time <= now:
@@ -109,7 +108,7 @@ async def _validate_hold(
     context,
 ) -> Hold:
     hold = await session.scalar(select(Hold).where(Hold.id == hold_id, Hold.user_id == current_user.id))
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if hold is None:
         raise AvailabilityValidationError("Valid holdId is required.")
     if hold.status != HoldStatus.PENDING or hold.expires_at <= now:
@@ -216,5 +215,5 @@ async def cancel_booking(
 
     if booking.status != BookingStatus.CANCELLED:
         booking.status = BookingStatus.CANCELLED
-        booking.cancelled_at = datetime.now(timezone.utc)
+        booking.cancelled_at = datetime.now(UTC)
         await session.commit()

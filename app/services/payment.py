@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -53,7 +53,7 @@ async def create_payment(
     if booking.status == BookingStatus.CANCELLED:
         raise PaymentValidationError("Cancelled booking cannot be paid.")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     provider = payload.provider or "mock"
     transaction = Transaction(
         booking_id=booking.id,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -132,7 +132,7 @@ async def _load_conflicts(
     )
     blocking_hold_query = select(Hold).where(
         Hold.status.in_(BLOCKING_HOLD_STATUSES),
-        Hold.expires_at > datetime.now(timezone.utc),
+        Hold.expires_at > datetime.now(UTC),
         Hold.start_time < range_end,
         Hold.end_time > range_start,
     )
@@ -224,15 +224,15 @@ async def get_availability(
     if local_start + duration > slot_end_limit:
         return AvailabilityResponse(date=target_date, timeSlots=[])
 
-    utc_range_start = local_start.astimezone(timezone.utc)
-    utc_range_end = slot_end_limit.astimezone(timezone.utc)
+    utc_range_start = local_start.astimezone(UTC)
+    utc_range_end = slot_end_limit.astimezone(UTC)
     bookings, holds = await _load_conflicts(session, context, utc_range_start, utc_range_end)
 
     slots: list[AvailabilitySlot] = []
     current_local = local_start
     while current_local + duration <= slot_end_limit:
-        slot_start_utc = current_local.astimezone(timezone.utc)
-        slot_end_utc = (current_local + duration).astimezone(timezone.utc)
+        slot_start_utc = current_local.astimezone(UTC)
+        slot_end_utc = (current_local + duration).astimezone(UTC)
         is_blocked = any(_overlaps(slot_start_utc, slot_end_utc, item.start_time, item.end_time) for item in bookings)
         if not is_blocked:
             is_blocked = any(_overlaps(slot_start_utc, slot_end_utc, item.start_time, item.end_time) for item in holds)

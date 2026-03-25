@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -11,7 +11,6 @@ from app.db.enums import HoldStatus
 from app.db.models import Hold, User
 from app.schemas.hold import HoldCreateRequest, HoldResponse
 from app.services.availability import (
-    AvailabilityNotFoundError,
     AvailabilityValidationError,
     _load_conflicts,
     _overlaps,
@@ -32,7 +31,7 @@ class HoldNotFoundError(Exception):
 def _ensure_utc(value: datetime, *, field_name: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise AvailabilityValidationError(f"{field_name} must include timezone information.")
-    return value.astimezone(timezone.utc)
+    return value.astimezone(UTC)
 
 
 def _serialize_hold(hold: Hold) -> HoldResponse:
@@ -59,7 +58,7 @@ async def create_hold(
 ) -> HoldResponse:
     start_time = _ensure_utc(payload.startTime, field_name="startTime")
     end_time = _ensure_utc(payload.endTime, field_name="endTime")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if end_time <= start_time:
         raise AvailabilityValidationError("endTime must be greater than startTime.")

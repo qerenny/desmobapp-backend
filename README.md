@@ -1,6 +1,6 @@
 # Coworking Booking Backend
 
-Backend skeleton for the coworking booking system.
+Backend for the coworking booking system.
 
 ## Stack
 
@@ -14,24 +14,63 @@ Backend skeleton for the coworking booking system.
 ## Local run
 
 1. Copy `.env.example` to `.env`.
-2. Start infrastructure:
+2. Install dependencies:
 
 ```bash
-docker compose up --build
+make install
 ```
 
-3. Open:
+3. Start PostgreSQL:
+
+```bash
+make up
+```
+
+4. Apply migrations:
+
+```bash
+make migrate
+```
+
+5. Seed RBAC data:
+
+```bash
+make seed-rbac
+```
+
+6. Start API:
+
+```bash
+make run
+```
+
+7. Open:
 
 - API: `http://localhost:8000`
 - Docs: `http://localhost:8000/docs`
 - Live health: `http://localhost:8000/health/live`
 - Ready health: `http://localhost:8000/health/ready`
 
-4. Seed RBAC data:
+## Developer commands
 
 ```bash
-poetry run python -m app.scripts.seed_rbac
+make lint
+make lint-fix
+make test
+make compile
+make check
 ```
+
+## CI
+
+GitHub Actions workflow lives in `.github/workflows/ci.yml`.
+It runs:
+
+- Alembic migrations
+- RBAC seed
+- `compileall`
+- `ruff check`
+- `pytest -q`
 
 ## Project layout
 
@@ -47,4 +86,3 @@ app/
 alembic/
 tests/
 ```
-# desmobapp-backend

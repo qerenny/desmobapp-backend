@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 from app.api.routes.analytics import router as analytics_router
-from app.api.routes.availability import router as availability_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.availability import router as availability_router
 from app.api.routes.bookings import router as bookings_router
 from app.api.routes.health import router as health_router
 from app.api.routes.holds import router as holds_router

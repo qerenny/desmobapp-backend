@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,7 @@ async def update_notification_preferences(
     payload: NotificationPrefsUpdate,
 ) -> None:
     preference = await session.get(NotificationPreference, current_user.id)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if preference is None:
         preference = NotificationPreference(
             user_id=current_user.id,

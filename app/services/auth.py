@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -14,8 +14,8 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
-from app.db.models import RefreshToken, Role, User, UserRoleAssignment
 from app.db.enums import UserStatus
+from app.db.models import RefreshToken, Role, User, UserRoleAssignment
 from app.schemas.auth import LoginRequest, LoginResponse, RegisterRequest, UserPublic
 from app.services.rbac import get_user_permissions_context
 
@@ -72,7 +72,7 @@ async def login_user(session: AsyncSession, payload: LoginRequest) -> LoginRespo
     refresh_token_record = RefreshToken(
         user_id=user.id,
         token_hash=hash_token(refresh_token),
-        expires_at=datetime.now(timezone.utc) + settings.refresh_token_ttl,
+        expires_at=datetime.now(UTC) + settings.refresh_token_ttl,
         device_info={"provider": "mock"},
     )
     session.add(refresh_token_record)
