@@ -1,0 +1,1154 @@
+openapi: 3.0.3
+info:
+  title: Coworking Booking System API
+  version: 1.0.0
+  description: |
+    API для системы бронирования рабочих мест (venues/rooms/seats).
+    
+    Унифицированная модель бронирования ресурса любого уровня:
+    - level=seat → бронируется конкретное место;
+    - level=room → бронируется целая комната;
+    - level=venue → бронируется всё помещение.
+servers:
+  - url: https://api.coworking.com/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Аутентификация и управление сессией
+  - name: Venues
+    description: Поиск и просмотр помещений/комнат/мест
+  - name: Availability
+    description: Проверка доступности ресурсов
+  - name: Holds
+    description: Удержания (временная блокировка слота)
+  - name: Bookings
+    description: Бронирования ресурсов (seat/room/venue)
+  - name: Payments
+    description: Платежи и возвраты
+  - name: Notifications
+    description: Уведомления и настройки уведомлений
+  - name: Admin
+    description: Администрирование пространств, тарифов и правил
+  - name: Analytics
+    description: Отчеты и метрики
+
+paths:
+  /auth/login:
+    post:
+      tags: 
+        - Auth
+      summary: Аутентификация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              default:
+                value: 
+                  email: user@example.com
+                  password: "123456"
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/LoginResponse'
+        '401': 
+          $ref: '#/components/responses/Unauthorized'
+        '429': 
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/register:
+    post:
+      tags: 
+        - Auth
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/UserPublic'
+        '400': 
+          $ref: '#/components/responses/BadRequest'
+        '409': 
+          $ref: '#/components/responses/Conflict'
+
+  /venues:
+    get:
+      tags: 
+        - Venues
+      summary: Поиск помещений (venues)
+      parameters:
+        - in: query
+          name: q
+          schema: 
+            type: string
+          description: Поисковая фраза (название/адрес)
+        - in: query
+          name: location
+          schema: 
+            type: string
+          description: Город или адрес (геопоиск)
+        - in: query
+          name: date
+          required: false
+          schema: 
+            type: string
+            format: date
+          description: Дата для оценки доступности
+        - in: query
+          name: capacity
+          schema: 
+            type: integer
+            minimum: 1
+          description: Минимальная вместимость (по количеству мест)
+        - in: query
+          name: features
+          schema:
+            type: array
+            items: 
+              type: string
+            example: 
+              - wifi
+              - printer
+              - coffee
+          style: form
+          explode: true
+          description: Требуемые фичи (по feature_links)
+      responses:
+        '200':
+          description: Список помещений
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/VenueListItem'
+
+  /venues/{venueId}:
+    get:
+      tags: 
+        - Venues
+      summary: Получить подробности помещения
+      parameters:
+        - $ref: '#/components/parameters/VenueIdPath'
+      responses:
+        '200':
+          description: Помещение
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/VenueFull'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /venues/{venueId}/rooms:
+    get:
+      tags: 
+        - Venues
+      summary: Список комнат помещения
+      parameters:
+        - $ref: '#/components/parameters/VenueIdPath'
+      responses:
+        '200':
+          description: Комнаты
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/RoomBrief'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /rooms/{roomId}/seats:
+    get:
+      tags: 
+        - Venues
+      summary: Список мест комнаты
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+      responses:
+        '200':
+          description: Места
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/SeatBrief'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /availability:
+    get:
+      tags: 
+        - Availability
+      summary: Проверка доступности ресурса любого уровня
+      description: |
+        Возвращает слоты доступности для заданного ресурса и интервала.
+        Учитывает брони `bookings` всех уровней и удержания `holds`.
+      parameters:
+        - in: query
+          name: level
+          required: true
+          schema: 
+            $ref: '#/components/schemas/BookingLevel'
+          description: Уровень ресурса (seat/room/venue)
+        - in: query
+          name: seatId
+          schema: 
+            type: string
+            format: uuid
+        - in: query
+          name: roomId
+          schema: 
+            type: string
+            format: uuid
+        - in: query
+          name: venueId
+          schema: 
+            type: string
+            format: uuid
+        - in: query
+          name: date
+          required: true
+          schema: 
+            type: string
+            format: date
+        - in: query
+          name: durationMinutes
+          schema: 
+            type: integer
+            minimum: 15
+            default: 60
+      responses:
+        '200':
+          description: Слоты доступности
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400': 
+          $ref: '#/components/responses/BadRequest'
+
+  /holds:
+    post:
+      tags: 
+        - Holds
+      summary: Создать удержание (hold) на слот
+      description: Временная блокировка слота перед оплатой/подтверждением
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/HoldCreateRequest'
+      responses:
+        '201':
+          description: Удержание создано
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Hold'
+        '400': 
+          $ref: '#/components/responses/BadRequest'
+        '409': 
+          $ref: '#/components/responses/Conflict'
+
+  /holds/{holdId}:
+    delete:
+      tags: 
+        - Holds
+      summary: Отменить удержание
+      parameters:
+        - $ref: '#/components/parameters/HoldIdPath'
+      responses:
+        '204': 
+          description: Удержание отменено
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /bookings:
+    post:
+      tags: 
+        - Bookings
+      summary: Создать бронирование ресурса (seat/room/venue)
+      description: |
+        Унифицированное бронирование по одному из уровней.
+        При наличии валидного hold можно указать holdId.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/BookingCreateRequest'
+            examples:
+              seat:
+                summary: Бронь места
+                value:
+                  level: seat
+                  seatId: "7b8e5b1d-1f81-4f03-b8f2-16c9ee1fcb91"
+                  startTime: "2025-11-12T10:00:00Z"
+                  endTime: "2025-11-12T14:00:00Z"
+              room:
+                summary: Бронь комнаты целиком
+                value:
+                  level: room
+                  roomId: "0a4b9a3e-57f6-4f50-b2b6-7d9a2b5d305c"
+                  startTime: "2025-11-12T10:00:00Z"
+                  endTime: "2025-11-12T12:00:00Z"
+              venue:
+                summary: Бронь всего помещения
+                value:
+                  level: venue
+                  venueId: "a9b8c7d6-1234-4321-9999-000000000001"
+                  startTime: "2025-11-20T09:00:00Z"
+                  endTime: "2025-11-20T18:00:00Z"
+      responses:
+        '201':
+          description: Бронирование создано
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Booking'
+        '400': 
+          $ref: '#/components/responses/BadRequest'
+        '409': 
+          $ref: '#/components/responses/Conflict'
+
+  /bookings/{bookingId}:
+    get:
+      tags: 
+        - Bookings
+      summary: Получить бронирование
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      responses:
+        '200':
+          description: Бронирование
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Booking'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: 
+        - Bookings
+      summary: Отменить бронирование
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      responses:
+        '204': 
+          description: Бронирование отменено
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{bookingId}/checkin:
+    post:
+      tags: 
+        - Bookings
+      summary: Чек-ин по QR/гео/вручную
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/CheckinRequest'
+      responses:
+        '200':
+          description: Чек-ин выполнен
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Checkin'
+        '400': 
+          $ref: '#/components/responses/BadRequest'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /payments:
+    post:
+      tags: 
+        - Payments
+      summary: Создать платёж по бронированию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PaymentCreateRequest'
+      responses:
+        '201':
+          description: Платеж создан
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Transaction'
+        '400': 
+          $ref: '#/components/responses/BadRequest'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/preferences:
+    put:
+      tags: 
+        - Notifications
+      summary: Обновить настройки уведомлений пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/NotificationPrefsUpdate'
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    type: string
+                    example: "Настройки уведомлений обновлены"
+
+  /admin/venues:
+    post:
+      tags: 
+        - Admin
+      summary: Создать помещение (админ)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/VenueCreate'
+      responses:
+        '201':
+          description: Помещение создано
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/VenueFull'
+        '403': 
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/rooms/{roomId}/layout:
+    put:
+      tags: 
+        - Admin
+      summary: Обновить схему комнаты (расстановка мест)
+      parameters:
+        - $ref: '#/components/parameters/RoomIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/RoomLayoutUpdate'
+      responses:
+        '200':
+          description: Схема обновлена
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/RoomFull'
+        '404': 
+          $ref: '#/components/responses/NotFound'
+        '403': 
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/analytics/occupancy:
+    get:
+      tags: 
+        - Analytics
+      summary: Аналитика загрузки помещений
+      parameters:
+        - in: query
+          name: startDate
+          required: true
+          schema: 
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          required: true
+          schema: 
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Данные аналитики
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/OccupancyAnalytics'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    VenueIdPath:
+      in: path
+      name: venueId
+      required: true
+      schema: 
+        type: string
+        format: uuid
+    RoomIdPath:
+      in: path
+      name: roomId
+      required: true
+      schema: 
+        type: string
+        format: uuid
+    BookingIdPath:
+      in: path
+      name: bookingId
+      required: true
+      schema: 
+        type: string
+        format: uuid
+    HoldIdPath:
+      in: path
+      name: holdId
+      required: true
+      schema: 
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Неверные данные запроса
+      content:
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Неавторизовано
+      content:
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Недостаточно прав
+      content:
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Конфликт (пересечение слотов, уже занято)
+      content:
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Слишком много запросов
+      content:
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ==== Auth ====
+    LoginRequest:
+      type: object
+      required: 
+        - email
+        - password
+      properties:
+        email: 
+          type: string
+          format: email
+        password: 
+          type: string
+          minLength: 6
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken: 
+          type: string
+        refreshToken: 
+          type: string
+        user: 
+          $ref: '#/components/schemas/UserPublic'
+
+    RegisterRequest:
+      type: object
+      required: 
+        - email
+        - password
+        - name
+      properties:
+        email: 
+          type: string
+          format: email
+        password: 
+          type: string
+          minLength: 6
+        name: 
+          type: string
+        phone: 
+          type: string
+
+    UserPublic:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        email: 
+          type: string
+          format: email
+        name: 
+          type: string
+
+    # ==== Enums ====
+    BookingLevel:
+      type: string
+      enum: 
+        - seat
+        - room
+        - venue
+    BookingStatus:
+      type: string
+      enum: 
+        - pending
+        - confirmed
+        - checked_in
+        - cancelled
+        - expired
+        - no_show
+        - completed
+    PaymentStatus:
+      type: string
+      enum: 
+        - pending
+        - authorized
+        - captured
+        - failed
+        - refunded
+        - cancelled
+    NotificationChannel:
+      type: string
+      enum: 
+        - push
+        - email
+
+    # ==== Venues / Rooms / Seats ====
+    VenueListItem:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        name: 
+          type: string
+        address: 
+          type: string
+        features:
+          type: array
+          items: 
+            type: string
+        availableWorkplaces:
+          type: integer
+          description: оценка доступных мест на дату/интервал
+
+    VenueFull:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        name: 
+          type: string
+        address: 
+          type: string
+        timezone: 
+          type: string
+        location:
+          type: object
+          properties:
+            lat: 
+              type: number
+            lon: 
+              type: number
+        features:
+          type: array
+          items: 
+            type: string
+        rooms:
+          type: array
+          items: 
+            $ref: '#/components/schemas/RoomBrief'
+
+    RoomBrief:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        name: 
+          type: string
+        allowFullRoomBooking: 
+          type: boolean
+        features:
+          type: array
+          items: 
+            type: string
+
+    RoomFull:
+      allOf:
+        - $ref: '#/components/schemas/RoomBrief'
+        - type: object
+          properties:
+            gridWidth: 
+              type: integer
+            gridHeight: 
+              type: integer
+            seats:
+              type: array
+              items: 
+                $ref: '#/components/schemas/SeatBrief'
+
+    SeatBrief:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        label: 
+          type: string
+          example: "A12"
+        gridX: 
+          type: integer
+        gridY: 
+          type: integer
+        seatType: 
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+        active: 
+          type: boolean
+
+    # ==== Availability ====
+    AvailabilitySlot:
+      type: object
+      properties:
+        startTime: 
+          type: string
+          format: date-time
+        endTime: 
+          type: string
+          format: date-time
+        available: 
+          type: boolean
+        seatId:
+          type: string
+          format: uuid
+          nullable: true
+          description: заполняется для level=seat
+    AvailabilityResponse:
+      type: object
+      properties:
+        date: 
+          type: string
+          format: date
+        timeSlots:
+          type: array
+          items: 
+            $ref: '#/components/schemas/AvailabilitySlot'
+
+    # ==== Holds ====
+    HoldCreateRequest:
+      type: object
+      required: 
+        - level
+        - startTime
+        - endTime
+      properties:
+        level: 
+          $ref: '#/components/schemas/BookingLevel'
+        seatId: 
+          type: string
+          format: uuid
+        roomId: 
+          type: string
+          format: uuid
+        venueId: 
+          type: string
+          format: uuid
+        startTime: 
+          type: string
+          format: date-time
+        endTime: 
+          type: string
+          format: date-time
+    Hold:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        level: 
+          $ref: '#/components/schemas/BookingLevel'
+        seatId: 
+          type: string
+          format: uuid
+          nullable: true
+        roomId: 
+          type: string
+          format: uuid
+          nullable: true
+        venueId: 
+          type: string
+          format: uuid
+        userId: 
+          type: string
+          format: uuid
+        startTime: 
+          type: string
+          format: date-time
+        endTime: 
+          type: string
+          format: date-time
+        expiresAt: 
+          type: string
+          format: date-time
+        status: 
+          type: string
+          example: "pending"
+        createdAt: 
+          type: string
+          format: date-time
+
+    # ==== Bookings ====
+    BookingCreateRequest:
+      type: object
+      required: 
+        - level
+        - startTime
+        - endTime
+      properties:
+        level: 
+          $ref: '#/components/schemas/BookingLevel'
+        seatId: 
+          type: string
+          format: uuid
+        roomId: 
+          type: string
+          format: uuid
+        venueId: 
+          type: string
+          format: uuid
+        holdId:
+          type: string
+          format: uuid
+          nullable: true
+        startTime: 
+          type: string
+          format: date-time
+        endTime: 
+          type: string
+          format: date-time
+
+    Booking:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        level: 
+          $ref: '#/components/schemas/BookingLevel'
+        status: 
+          $ref: '#/components/schemas/BookingStatus'
+        seatId: 
+          type: string
+          format: uuid
+          nullable: true
+        roomId: 
+          type: string
+          format: uuid
+          nullable: true
+        venueId: 
+          type: string
+          format: uuid
+        userId: 
+          type: string
+          format: uuid
+        holdId: 
+          type: string
+          format: uuid
+          nullable: true
+        startTime: 
+          type: string
+          format: date-time
+        endTime: 
+          type: string
+          format: date-time
+        priceAmountCents: 
+          type: integer
+        priceCurrency: 
+          type: string
+          example: "RUB"
+        createdAt: 
+          type: string
+          format: date-time
+        updatedAt: 
+          type: string
+          format: date-time
+        cancelledAt: 
+          type: string
+          format: date-time
+          nullable: true
+
+    # ==== Check-in ====
+    CheckinRequest:
+      type: object
+      required: 
+        - method
+      properties:
+        method:
+          type: string
+          enum: 
+            - qr
+            - manual
+            - geo
+        lat:
+          type: number
+          nullable: true
+        lon:
+          type: number
+          nullable: true
+        qrCode:
+          type: string
+          nullable: true
+    Checkin:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        bookingId: 
+          type: string
+          format: uuid
+        method: 
+          type: string
+          enum: 
+            - qr
+            - manual
+            - geo
+        location:
+          type: object
+          properties:
+            lat: 
+              type: number
+              nullable: true
+            lon: 
+              type: number
+              nullable: true
+        checkedInAt: 
+          type: string
+          format: date-time
+        notes: 
+          type: string
+          nullable: true
+
+    # ==== Payments ====
+    PaymentCreateRequest:
+      type: object
+      required: 
+        - bookingId
+        - amountCents
+        - currency
+      properties:
+        bookingId: 
+          type: string
+          format: uuid
+        amountCents: 
+          type: integer
+          minimum: 0
+        currency: 
+          type: string
+          example: "RUB"
+        provider: 
+          type: string
+          example: "Stripe"
+    Transaction:
+      type: object
+      properties:
+        id: 
+          type: string
+          format: uuid
+        bookingId: 
+          type: string
+          format: uuid
+        userId: 
+          type: string
+          format: uuid
+        provider: 
+          type: string
+        externalId: 
+          type: string
+        status: 
+          $ref: '#/components/schemas/PaymentStatus'
+        amountCents: 
+          type: integer
+        refundedCents: 
+          type: integer
+        currency: 
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        authorizedAt: 
+          type: string
+          format: date-time
+          nullable: true
+        capturedAt: 
+          type: string
+          format: date-time
+          nullable: true
+        refundedAt: 
+          type: string
+          format: date-time
+          nullable: true
+        createdAt: 
+          type: string
+          format: date-time
+        updatedAt: 
+          type: string
+          format: date-time
+
+    # ==== Notifications ====
+    NotificationPrefsUpdate:
+      type: object
+      properties:
+        emailNotifications: 
+          type: boolean
+        pushNotifications: 
+          type: boolean
+        reminderBeforeBooking: 
+          type: boolean
+        promotionalEmails: 
+          type: boolean
+
+    # ==== Admin create/update ====
+    VenueCreate:
+      type: object
+      required: 
+        - name
+        - address
+      properties:
+        name: 
+          type: string
+        address: 
+          type: string
+        timezone: 
+          type: string
+          default: "Europe/Moscow"
+        features:
+          type: array
+          items: 
+            type: string
+    RoomLayoutUpdate:
+      type: object
+      properties:
+        allowFullRoomBooking: 
+          type: boolean
+        seats:
+          type: array
+          items:
+            type: object
+            required: 
+              - label
+              - gridX
+              - gridY
+            properties:
+              id: 
+                type: string
+                format: uuid
+                nullable: true
+              label: 
+                type: string
+              gridX: 
+                type: integer
+              gridY: 
+                type: integer
+              seatType: 
+                type: string
+              attributes:
+                type: object
+                additionalProperties: true
+              active: 
+                type: boolean
+
+    # ==== Analytics ====
+    OccupancyAnalytics:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            startDate: 
+              type: string
+              format: date
+            endDate: 
+              type: string
+              format: date
+        occupancyRate: 
+          type: number
+          format: float
+          example: 0.75
+        totalBookings: 
+          type: integer
+          example: 150
+        revenue: 
+          type: number
+          format: float
+          example: 150000.5
+
+    # ==== Common ====
+    ErrorResponse:
+      type: object
+      properties:
+        code: 
+          type: string
+          example: "bad_request"
+        message: 
+          type: string
+        details:
+          type: object
+          additionalProperties: true

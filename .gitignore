@@ -30,7 +30,9 @@ build/
 dist/
 *.egg-info/
 .eggs/
-docs/
+docs/*
+!docs/swagger.yaml
+!docs/frontend_handoff.md
 
 # Logs
 *.log
