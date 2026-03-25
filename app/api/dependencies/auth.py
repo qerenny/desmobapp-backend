@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.db.enums import UserStatus
 from app.db.models import User
 from app.db.session import get_db_session
 from app.schemas.security import AccessTokenPayload
@@ -32,6 +33,8 @@ async def get_current_user(
     user = await session.scalar(select(User).where(User.id == token_payload.sub))
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found.")
+    if user.status != UserStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not active.")
 
     return user
 
@@ -45,6 +48,9 @@ def require_permissions(*required_permissions: str) -> Callable:
             token_payload = AccessTokenPayload.model_validate(payload)
         except (jwt.InvalidTokenError, ValueError) as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token.") from exc
+
+        if token_payload.type != "access":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token type.")
 
         permission_set = set(token_payload.permissions)
         missing = [permission for permission in required_permissions if permission not in permission_set]

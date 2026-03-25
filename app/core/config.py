@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from datetime import timedelta
+from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, alias="PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     db_echo: bool = Field(default=False, alias="DB_ECHO")
+    cors_origins: list[str] = Field(
+        default=["http://localhost:3000", "http://127.0.0.1:3000"],
+        alias="CORS_ORIGINS",
+    )
 
     postgres_user: str = Field(default="app", alias="POSTGRES_USER")
     postgres_password: str = Field(default="app", alias="POSTGRES_PASSWORD")
@@ -56,6 +60,20 @@ class Settings(BaseSettings):
     @property
     def refresh_token_ttl(self) -> timedelta:
         return timedelta(days=self.refresh_token_expire_days)
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, value: str) -> str:
+        if len(value) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long.")
+        return value
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 @lru_cache(maxsize=1)

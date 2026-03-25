@@ -26,20 +26,20 @@ class RoomBrief(BaseModel):
     id: UUID
     name: str
     allowFullRoomBooking: bool
-    features: list[str] = []
+    features: list[str] = Field(default_factory=list)
 
 
 class RoomFull(RoomBrief):
     gridWidth: int | None = None
     gridHeight: int | None = None
-    seats: list[SeatBrief] = []
+    seats: list[SeatBrief] = Field(default_factory=list)
 
 
 class VenueListItem(BaseModel):
     id: UUID
     name: str
     address: str
-    features: list[str] = []
+    features: list[str] = Field(default_factory=list)
     availableWorkplaces: int
 
 
@@ -49,15 +49,15 @@ class VenueFull(BaseModel):
     address: str
     timezone: str
     location: GeoPoint = GeoPoint()
-    features: list[str] = []
-    rooms: list[RoomBrief] = []
+    features: list[str] = Field(default_factory=list)
+    rooms: list[RoomBrief] = Field(default_factory=list)
 
 
 class VenueCreate(BaseModel):
     name: str = Field(min_length=1)
     address: str = Field(min_length=1)
     timezone: str = "Europe/Moscow"
-    features: list[str] = []
+    features: list[str] = Field(default_factory=list)
 
 
 class RoomLayoutSeatInput(BaseModel):
@@ -72,4 +72,4 @@ class RoomLayoutSeatInput(BaseModel):
 
 class RoomLayoutUpdate(BaseModel):
     allowFullRoomBooking: bool | None = None
-    seats: list[RoomLayoutSeatInput] = []
+    seats: list[RoomLayoutSeatInput] = Field(default_factory=list)
