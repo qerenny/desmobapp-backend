@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, alias="PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     db_echo: bool = Field(default=False, alias="DB_ECHO")
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://127.0.0.1:3000"],
+    cors_origins_raw: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
         alias="CORS_ORIGINS",
     )
 
@@ -61,18 +61,15 @@ class Settings(BaseSettings):
     def refresh_token_ttl(self) -> timedelta:
         return timedelta(days=self.refresh_token_expire_days)
 
+    @property
+    def cors_origins(self) -> list[str]:
+        return [item.strip() for item in self.cors_origins_raw.split(",") if item.strip()]
+
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, value: str) -> str:
         if len(value) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters long.")
-        return value
-
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: object) -> object:
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
 

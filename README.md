@@ -59,7 +59,29 @@ make lint-fix
 make test
 make compile
 make check
+make precommit-install
+make precommit-run
 ```
+
+## Demo data for frontend
+
+```bash
+make seed-demo
+```
+
+Подробная инструкция для фронтендера лежит в:
+
+`docs/frontend_handoff.md`
+
+Скрипт создаёт:
+
+- demo-аккаунты с разными ролями
+- готовое demo venue
+- комнаты, места, room hours и booking rules
+
+Единый пароль для demo-аккаунтов:
+
+`demo12345`
 
 ## CI
 

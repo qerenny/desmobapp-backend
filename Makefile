@@ -3,8 +3,9 @@ PYTHON ?= python3
 UVICORN_HOST ?= 0.0.0.0
 UVICORN_PORT ?= 8000
 APP_MODULE ?= app.main:app
+PRE_COMMIT_HOME ?= .cache/pre-commit
 
-.PHONY: install up down run migrate seed-rbac compile lint lint-fix test check
+.PHONY: install up down run migrate seed-rbac seed-demo compile lint lint-fix test check precommit-install precommit-run
 
 install:
 	$(POETRY) install
@@ -24,6 +25,9 @@ migrate:
 seed-rbac:
 	$(POETRY) run python -m app.scripts.seed_rbac
 
+seed-demo:
+	$(POETRY) run python -m app.scripts.seed_demo
+
 compile:
 	$(PYTHON) -m compileall app tests alembic
 
@@ -35,5 +39,11 @@ lint-fix:
 
 test:
 	$(POETRY) run pytest -q
+
+precommit-install:
+	PRE_COMMIT_HOME=$(PRE_COMMIT_HOME) $(POETRY) run pre-commit install --hook-type pre-commit --hook-type pre-push
+
+precommit-run:
+	PRE_COMMIT_HOME=$(PRE_COMMIT_HOME) $(POETRY) run pre-commit run --all-files
 
 check: compile lint test
