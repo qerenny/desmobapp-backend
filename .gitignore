@@ -33,6 +33,8 @@ dist/
 docs/*
 !docs/swagger.yaml
 !docs/frontend_handoff.md
+!docs/postman_collection.json
+!docs/postman_environment.json
 
 # Logs
 *.log

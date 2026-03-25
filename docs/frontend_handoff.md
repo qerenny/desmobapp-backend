@@ -56,6 +56,46 @@ make run
 - Swagger UI: `http://localhost:8000/docs`
 - OpenAPI JSON: `http://localhost:8000/openapi.json`
 
+## 3.1 Быстрый старт через Postman
+
+Если фронт нужно быстро отлаживать без ручной сборки запросов, используй готовые файлы:
+
+- [docs/postman_collection.json](/Users/qerenny/Library/Mobile Documents/com~apple~CloudDocs/Documents/ITMO/DesMobAndNetApps/backend/docs/postman_collection.json)
+- [docs/postman_environment.json](/Users/qerenny/Library/Mobile Documents/com~apple~CloudDocs/Documents/ITMO/DesMobAndNetApps/backend/docs/postman_environment.json)
+
+Что сделать в Postman:
+
+1. Import collection
+2. Import environment
+3. Выбрать environment `Coworking Backend Local`
+4. Выполнить `Diagnostics / Health Ready`
+5. Выполнить `Auth / Login Demo Client`
+6. Выполнить `Auth / Login Demo Admin`
+
+Коллекция после этого сама сохраняет:
+
+- `accessToken`
+- `adminAccessToken`
+- `venueId`
+- `roomId`
+- `seatId`
+- `holdId`
+- `bookingId`
+- `transactionId`
+
+И также автоматически генерирует:
+
+- `bookingDate`
+- `holdStartTime`
+- `holdEndTime`
+- `analyticsStartDate`
+- `analyticsEndDate`
+
+Время внутри коллекции уже подобрано под seeded demo-расписание:
+
+- `10:00-11:00` по `Europe/Moscow`
+- это `07:00-08:00Z`
+
 ## 4. CORS для фронта
 
 В `.env` уже включены стандартные dev-origin:
@@ -193,7 +233,40 @@ Seats:
 3. Создать новое venue
 4. Обновить layout у комнаты
 
+## 8.1 Рекомендуемый порядок запросов в Postman
+
+Для клиентского сценария:
+
+1. `Auth / Login Demo Client`
+2. `Browse / Get Venues`
+3. `Browse / Get Venue Details`
+4. `Browse / Get Venue Rooms`
+5. `Browse / Get Room Seats`
+6. `Booking Flow / Get Availability`
+7. `Booking Flow / Create Hold`
+8. `Booking Flow / Create Booking`
+9. `Booking Flow / Get Booking`
+10. `Booking Flow / Check In Booking`
+11. `Booking Flow / Mock Payment`
+12. `Booking Flow / Update Notification Preferences`
+13. `Booking Flow / Cancel Booking`
+
+Для admin-сценария:
+
+1. `Auth / Login Demo Admin`
+2. `Admin / Get Occupancy Analytics`
+3. `Admin / Create Venue`
+4. `Admin / Update Room Layout`
+
+Особенности:
+
+- `Cancel Hold (Optional)` запускается только если нужно отменить hold до создания booking
+- `Update Room Layout` добавляет новое место в уже выбранную room, поэтому перед ним надо хотя бы один раз выполнить `Browse / Get Venue Rooms`
+- `Register Random User` нужен только для ручных тестов регистрации, для основной demo-цепочки он не нужен
+
 ## 9. Примеры запросов
+
+Если используешь Postman-коллекцию, эти body уже лежат внутри запросов и подставляются автоматически.
 
 ### Login
 
@@ -276,6 +349,15 @@ Backend не требует ручного копирования UUID из ба
 4. взять `holdId` из `POST /holds`
 5. взять `bookingId` из `POST /bookings`
 
+В Postman это автоматизировано:
+
+- после `Get Venues` сохраняется первый `venueId`
+- после `Get Venue Rooms` сохраняется первый `roomId`
+- после `Get Room Seats` сохраняется первый `seatId`
+- после `Create Hold` сохраняется `holdId`
+- после `Create Booking` сохраняется `bookingId`
+- после `Mock Payment` сохраняется `transactionId`
+
 ## 11. Что важно учитывать на фронте
 
 - почти все бизнес-ручки требуют bearer token
@@ -309,7 +391,38 @@ make precommit-install
 make precommit-run
 ```
 
-## 13. Что пойдёт следующим этапом
+## 13. Postman
+
+Для фронтендера уже подготовлены:
+
+- [docs/postman_collection.json](/Users/qerenny/Library/Mobile Documents/com~apple~CloudDocs/Documents/ITMO/DesMobAndNetApps/backend/docs/postman_collection.json)
+- [docs/postman_environment.json](/Users/qerenny/Library/Mobile Documents/com~apple~CloudDocs/Documents/ITMO/DesMobAndNetApps/backend/docs/postman_environment.json)
+
+Что умеет коллекция:
+
+- покрывать весь текущий `P0`-контракт из `swagger.yaml`, который реально нужен фронту
+- логинить `client` и `admin`
+- автоматически сохранять `accessToken`, `adminAccessToken`
+- автоматически сохранять `venueId`, `roomId`, `seatId`, `holdId`, `bookingId`, `transactionId`
+- автоматически считать `bookingDate`, `holdStartTime`, `holdEndTime` на следующий день
+- отдельно прогонять `Browse`, `Booking Flow`, `Admin`
+- запускать happy path без ручного копирования body и UUID между запросами
+
+Рекомендуемый порядок запуска в Postman:
+
+1. Import collection
+2. Import environment
+3. Выбрать environment `Coworking Backend Local`
+4. Выполнить `Diagnostics / Health Ready`
+5. Выполнить `Auth / Login Demo Client`
+6. Выполнить `Auth / Login Demo Admin`
+7. Выполнить папку `Browse`
+8. Выполнить папку `Booking Flow`
+9. При необходимости выполнить папку `Admin`
+
+Если frontend работает не на `localhost:8000`, надо поменять только `baseUrl` в environment.
+
+## 14. Что пойдёт следующим этапом
 
 Это ещё не готово для фронта, но будет полезно позже:
 

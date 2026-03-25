@@ -73,6 +73,21 @@ make seed-demo
 
 `docs/frontend_handoff.md`
 
+Postman-файлы для быстрого API flow:
+
+- `docs/postman_collection.json`
+- `docs/postman_environment.json`
+
+Быстрый сценарий в Postman:
+
+1. Import оба файла
+2. Выбрать environment `Coworking Backend Local`
+3. Выполнить `Auth / Login Demo Client`
+4. Выполнить `Browse / Get Venues -> Get Venue Rooms -> Get Room Seats`
+5. Выполнить `Booking Flow / Get Availability -> Create Hold -> Create Booking`
+
+Коллекция сама сохраняет токены и основные `id` из ответов.
+
 Скрипт создаёт:
 
 - demo-аккаунты с разными ролями
