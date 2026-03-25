@@ -1,0 +1,20 @@
+$kind: http-request
+description: Loads rooms for the selected venue and stores the first roomId.
+url: "{{baseUrl}}/venues/{{venueId}}/rooms"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200', function () {
+        pm.response.to.have.status(200);
+      });
+      const payload = pm.response.json();
+      if (Array.isArray(payload) && payload.length > 0) {
+        pm.collectionVariables.set('roomId', payload[0].id);
+      }
+    language: text/javascript
+order: 3000

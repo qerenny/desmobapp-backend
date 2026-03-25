@@ -1,0 +1,9 @@
+$kind: http-request
+description: Loads a single booking card.
+url: "{{baseUrl}}/bookings/{{bookingId}}"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 5000

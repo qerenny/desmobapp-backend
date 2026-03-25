@@ -1,0 +1,12 @@
+# Use this workspace to collaborate
+workspace:
+  id: dd091be0-c154-4022-8eec-a70290334d8b
+cloudResources:
+  collections:
+    ../postman/collections/Coworking Booking Backend MVP: 0ee1a06f-e341-4753-8967-f8edd8334c60
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

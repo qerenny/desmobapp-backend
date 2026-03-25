@@ -1,0 +1,9 @@
+$kind: http-request
+description: Loads details for the selected venue.
+url: "{{baseUrl}}/venues/{{venueId}}"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 2000

@@ -1,0 +1,10 @@
+$kind: http-request
+description: Optional cleanup request. Run it only when you want to cancel a
+  hold before booking.
+url: "{{baseUrl}}/holds/{{holdId}}"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 3000

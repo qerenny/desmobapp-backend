@@ -1,0 +1,20 @@
+name: Coworking Backend Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8000'
+    enabled: true
+  - key: clientEmail
+    value: demo.client@example.com
+    enabled: true
+  - key: clientPassword
+    value: demo12345
+    enabled: true
+  - key: adminEmail
+    value: demo.admin@example.com
+    enabled: true
+  - key: adminPassword
+    value: demo12345
+    enabled: true
+  - key: paymentAmountCents
+    value: '1500'
+    enabled: true

@@ -1,0 +1,24 @@
+$kind: http-request
+description: Logs in the seeded demo client and stores accessToken.
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{clientEmail}}",
+      "password": "{{clientPassword}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200', function () {
+        pm.response.to.have.status(200);
+      });
+      const payload = pm.response.json();
+      pm.collectionVariables.set('accessToken', payload.accessToken);
+      pm.collectionVariables.set('clientUserId', payload.user.id);
+    language: text/javascript
+order: 1000

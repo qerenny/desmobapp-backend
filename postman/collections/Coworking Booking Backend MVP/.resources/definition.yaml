@@ -1,0 +1,49 @@
+$kind: collection
+name: Coworking Booking Backend MVP
+description: Postman collection for the current MVP backend. Import together
+  with docs/postman_environment.json, run the login requests first, then execute
+  the browse and booking flow requests in order.
+variables:
+  accessToken: ""
+  adminAccessToken: ""
+  clientUserId: ""
+  adminUserId: ""
+  venueId: ""
+  roomId: ""
+  seatId: ""
+  holdId: ""
+  bookingId: ""
+  transactionId: ""
+  createdVenueId: ""
+  createdVenueName: ""
+  bookingDate: ""
+  holdStartTime: ""
+  holdEndTime: ""
+  analyticsStartDate: ""
+  analyticsEndDate: ""
+  layoutSeatLabel: ""
+scripts:
+  - type: http:beforeRequest
+    code: >-
+      const dayMs = 24 * 60 * 60 * 1000;
+
+      const tomorrow = new Date(Date.now() + dayMs);
+
+      const bookingDate = tomorrow.toISOString().slice(0, 10);
+
+      pm.collectionVariables.set('bookingDate', bookingDate);
+
+      pm.collectionVariables.set('holdStartTime', `${bookingDate}T07:00:00Z`);
+
+      pm.collectionVariables.set('holdEndTime', `${bookingDate}T08:00:00Z`);
+
+      pm.collectionVariables.set('analyticsStartDate', bookingDate);
+
+      pm.collectionVariables.set('analyticsEndDate', bookingDate);
+
+      pm.collectionVariables.set('createdVenueName', `Postman Venue
+      ${Date.now()}`);
+
+      pm.collectionVariables.set('layoutSeatLabel',
+      `PM-${String(Date.now()).slice(-6)}`);
+    language: text/javascript

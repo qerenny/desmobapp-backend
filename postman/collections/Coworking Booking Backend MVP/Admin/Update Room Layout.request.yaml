@@ -1,0 +1,27 @@
+$kind: http-request
+description: Adds a new seat to the currently selected room. Run Browse > Get
+  Venue Rooms first so roomId is set.
+url: "{{baseUrl}}/admin/rooms/{{roomId}}/layout"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "allowFullRoomBooking": true,
+      "seats": [
+        {
+          "label": "{{layoutSeatLabel}}",
+          "gridX": 7,
+          "gridY": 1,
+          "seatType": "desk",
+          "active": true
+        }
+      ]
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminAccessToken}}"
+order: 3000

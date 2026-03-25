@@ -1,0 +1,29 @@
+$kind: http-request
+description: Creates a new venue through the admin API.
+url: "{{baseUrl}}/admin/venues"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "{{createdVenueName}}",
+      "address": "Saint Petersburg, Nevsky prospect 10",
+      "timezone": "Europe/Moscow",
+      "features": ["Wi-Fi", "Coffee", "Meeting Rooms"]
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminAccessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201', function () {
+        pm.response.to.have.status(201);
+      });
+      const payload = pm.response.json();
+      pm.collectionVariables.set('createdVenueId', payload.id);
+    language: text/javascript
+order: 2000

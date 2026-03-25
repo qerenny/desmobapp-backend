@@ -1,0 +1,29 @@
+$kind: http-request
+description: Captures a mock payment for the booking.
+url: "{{baseUrl}}/payments"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": "{{bookingId}}",
+      "amountCents": {{paymentAmountCents}},
+      "currency": "RUB",
+      "provider": "mock"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201', function () {
+        pm.response.to.have.status(201);
+      });
+      const payload = pm.response.json();
+      pm.collectionVariables.set('transactionId', payload.id);
+    language: text/javascript
+order: 7000

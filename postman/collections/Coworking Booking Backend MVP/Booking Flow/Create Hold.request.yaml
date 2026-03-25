@@ -1,0 +1,29 @@
+$kind: http-request
+description: Creates a hold for the selected seat and stores holdId.
+url: "{{baseUrl}}/holds"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "level": "seat",
+      "seatId": "{{seatId}}",
+      "startTime": "{{holdStartTime}}",
+      "endTime": "{{holdEndTime}}"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201', function () {
+        pm.response.to.have.status(201);
+      });
+      const payload = pm.response.json();
+      pm.collectionVariables.set('holdId', payload.id);
+    language: text/javascript
+order: 2000

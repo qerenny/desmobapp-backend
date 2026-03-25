@@ -1,0 +1,9 @@
+$kind: http-request
+description: Cancels the current booking.
+url: "{{baseUrl}}/bookings/{{bookingId}}"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 9000

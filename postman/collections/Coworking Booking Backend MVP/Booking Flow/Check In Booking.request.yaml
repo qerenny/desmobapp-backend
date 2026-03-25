@@ -1,0 +1,19 @@
+$kind: http-request
+description: Performs a mock geo check-in for the booking.
+url: "{{baseUrl}}/bookings/{{bookingId}}/checkin"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "method": "geo",
+      "lat": 59.9386,
+      "lon": 30.3141
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 6000

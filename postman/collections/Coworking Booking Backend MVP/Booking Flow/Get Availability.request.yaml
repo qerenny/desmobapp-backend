@@ -1,0 +1,16 @@
+$kind: http-request
+description: Checks seat availability for a future day generated automatically
+  by the collection.
+url: "{{baseUrl}}/availability?level=seat&seatId={{seatId}}&date={{bookingDate}\
+  }&durationMinutes=60"
+method: GET
+queryParams:
+  level: seat
+  seatId: "{{seatId}}"
+  date: "{{bookingDate}}"
+  durationMinutes: "60"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 1000

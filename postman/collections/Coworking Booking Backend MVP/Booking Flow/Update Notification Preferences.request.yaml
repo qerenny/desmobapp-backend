@@ -1,0 +1,20 @@
+$kind: http-request
+description: Updates notification preferences for the logged-in client.
+url: "{{baseUrl}}/notifications/preferences"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "emailNotifications": false,
+      "pushNotifications": true,
+      "reminderBeforeBooking": false,
+      "promotionalEmails": false
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 8000

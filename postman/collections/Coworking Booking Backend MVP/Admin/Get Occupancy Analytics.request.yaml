@@ -1,0 +1,13 @@
+$kind: http-request
+description: Reads occupancy analytics for the generated booking day.
+url: "{{baseUrl}}/admin/analytics/occupancy?startDate={{analyticsStartDate}}&en\
+  dDate={{analyticsEndDate}}"
+method: GET
+queryParams:
+  startDate: "{{analyticsStartDate}}"
+  endDate: "{{analyticsEndDate}}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminAccessToken}}"
+order: 1000

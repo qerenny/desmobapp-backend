@@ -1,0 +1,16 @@
+$kind: http-request
+description: Optional request for quick manual registration tests.
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "postman.user+{{$timestamp}}@example.com",
+      "password": "secret123",
+      "name": "Postman User {{$timestamp}}",
+      "phone": "+79990000000"
+    }
+order: 3000

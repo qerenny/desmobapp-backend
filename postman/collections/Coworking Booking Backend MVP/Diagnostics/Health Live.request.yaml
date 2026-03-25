@@ -1,0 +1,5 @@
+$kind: http-request
+description: Quick liveness check.
+url: "{{baseUrl}}/health/live"
+method: GET
+order: 1000

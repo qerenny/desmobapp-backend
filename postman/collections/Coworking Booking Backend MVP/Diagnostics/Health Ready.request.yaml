@@ -1,0 +1,5 @@
+$kind: http-request
+description: Readiness check before frontend work.
+url: "{{baseUrl}}/health/ready"
+method: GET
+order: 2000

@@ -1,0 +1,30 @@
+$kind: http-request
+description: Converts the hold into a booking and stores bookingId.
+url: "{{baseUrl}}/bookings"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "level": "seat",
+      "seatId": "{{seatId}}",
+      "holdId": "{{holdId}}",
+      "startTime": "{{holdStartTime}}",
+      "endTime": "{{holdEndTime}}"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201', function () {
+        pm.response.to.have.status(201);
+      });
+      const payload = pm.response.json();
+      pm.collectionVariables.set('bookingId', payload.id);
+    language: text/javascript
+order: 4000
