@@ -1,0 +1,47 @@
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+docs/
+
+# Logs
+*.log
+
+# IDEs
+.idea/
+.vscode/
+
+# Local databases and dumps
+*.sqlite3
+*.db
+*.sql
+
+# Docker overrides
+docker-compose.override.yml

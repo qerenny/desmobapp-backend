@@ -1,0 +1,66 @@
+from __future__ import annotations
+
+from functools import lru_cache
+from datetime import timedelta
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    app_name: str = Field(default="Coworking Booking Backend", alias="APP_NAME")
+    app_env: str = Field(default="development", alias="APP_ENV")
+    debug: bool = Field(default=False, alias="DEBUG")
+    api_v1_prefix: str = Field(default="/api/v1", alias="API_V1_PREFIX")
+    host: str = Field(default="0.0.0.0", alias="HOST")
+    port: int = Field(default=8000, alias="PORT")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    db_echo: bool = Field(default=False, alias="DB_ECHO")
+
+    postgres_user: str = Field(default="app", alias="POSTGRES_USER")
+    postgres_password: str = Field(default="app", alias="POSTGRES_PASSWORD")
+    postgres_db: str = Field(default="coworking", alias="POSTGRES_DB")
+    postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
+    postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
+
+    secret_key: str = Field(default="change-me", alias="SECRET_KEY")
+    access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=14, alias="REFRESH_TOKEN_EXPIRE_DAYS")
+    hold_ttl_seconds: int = Field(default=900, alias="HOLD_TTL_SECONDS")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    @property
+    def database_url(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def database_url_sync(self) -> str:
+        return (
+            f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def access_token_ttl(self) -> timedelta:
+        return timedelta(minutes=self.access_token_expire_minutes)
+
+    @property
+    def refresh_token_ttl(self) -> timedelta:
+        return timedelta(days=self.refresh_token_expire_days)
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
