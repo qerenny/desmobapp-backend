@@ -25,6 +25,18 @@
 - `PUT /admin/rooms/{roomId}/layout`
 - `GET /admin/analytics/occupancy`
 
+И уже реализованы user-facing `P1` ручки:
+
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /me`
+- `PATCH /me`
+- `GET /me/bookings`
+- `GET /notifications/preferences`
+- `GET /favorites`
+- `POST /favorites`
+- `DELETE /favorites/{venueId}`
+
 Дополнительно:
 
 - `/docs`
@@ -37,7 +49,8 @@
 - `payments` сейчас mock, реального провайдера нет
 - `check-in` сейчас MVP-уровня: без полноценной валидации геозоны и реального QR
 - `analytics` сейчас базовая загрузка помещений, без сложной бизнес-аналитики
-- `refresh/logout/me` пока ещё не реализованы, это следующий этап
+- `favorites` сейчас только на уровне venue
+- logout сейчас ревокает session через `refreshToken`
 
 ## 3. Быстрый запуск backend
 
@@ -201,7 +214,23 @@ Seats:
 
 Можно сделать экран уведомлений:
 
+- `GET /notifications/preferences`
 - `PUT /notifications/preferences`
+
+Можно сделать экран профиля:
+
+- `GET /me`
+- `PATCH /me`
+
+Можно сделать экран моих бронирований:
+
+- `GET /me/bookings`
+
+Можно сделать экран избранного:
+
+- `GET /favorites`
+- `POST /favorites`
+- `DELETE /favorites/{venueId}`
 
 ### 7.5 Admin flow
 

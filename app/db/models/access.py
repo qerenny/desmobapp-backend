@@ -26,6 +26,26 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class FavoriteVenue(Base):
+    __tablename__ = "favorite_venues"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    venue_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("venues.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class RefreshToken(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "refresh_tokens"
 

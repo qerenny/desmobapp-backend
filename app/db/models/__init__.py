@@ -2,6 +2,7 @@
 
 from app.db.models.access import (
     AuditLog,
+    FavoriteVenue,
     Invite,
     Permission,
     RefreshToken,
@@ -32,6 +33,7 @@ __all__ = [
     "Checkin",
     "Feature",
     "FeatureLink",
+    "FavoriteVenue",
     "Hold",
     "Invite",
     "Notification",

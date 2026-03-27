@@ -1,15 +1,20 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.enums import BookingStatus, HoldStatus
 from app.db.models import Booking, Hold, User
-from app.schemas.booking import BookingCreateRequest, BookingResponse
+from app.schemas.booking import (
+    BookingCreateRequest,
+    BookingListItem,
+    BookingListResponse,
+    BookingResponse,
+)
 from app.services.availability import (
     AvailabilityValidationError,
     _load_conflicts,
@@ -50,6 +55,23 @@ def _serialize_booking(booking: Booking) -> BookingResponse:
         priceCurrency=booking.price_currency,
         createdAt=booking.created_at,
         updatedAt=booking.updated_at,
+        cancelledAt=booking.cancelled_at,
+    )
+
+
+def _serialize_booking_list_item(booking: Booking) -> BookingListItem:
+    return BookingListItem(
+        id=booking.id,
+        status=booking.status,
+        level=booking.level,
+        seatId=booking.seat_id,
+        roomId=booking.room_id,
+        venueId=booking.venue_id,
+        startTime=booking.start_time,
+        endTime=booking.end_time,
+        priceAmountCents=booking.price_amount_cents,
+        priceCurrency=booking.price_currency,
+        createdAt=booking.created_at,
         cancelledAt=booking.cancelled_at,
     )
 
@@ -201,6 +223,41 @@ async def get_booking(
     if booking is None:
         raise BookingNotFoundError("Booking not found.")
     return _serialize_booking(booking)
+
+
+async def list_bookings(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    status: BookingStatus | None,
+    date_from: date | None,
+    date_to: date | None,
+    page: int,
+    limit: int,
+) -> BookingListResponse:
+    stmt = select(Booking).where(Booking.user_id == current_user.id)
+    if status is not None:
+        stmt = stmt.where(Booking.status == status)
+    if date_from is not None:
+        stmt = stmt.where(Booking.start_time >= datetime.combine(date_from, time.min, tzinfo=UTC))
+    if date_to is not None:
+        stmt = stmt.where(
+            Booking.start_time < datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=UTC)
+        )
+
+    total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    items = (
+        await session.scalars(
+            stmt.order_by(Booking.start_time.desc()).offset((page - 1) * limit).limit(limit)
+        )
+    ).all()
+
+    return BookingListResponse(
+        items=[_serialize_booking_list_item(booking) for booking in items],
+        page=page,
+        limit=limit,
+        total=total,
+    )
 
 
 async def cancel_booking(

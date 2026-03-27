@@ -5,7 +5,29 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import NotificationPreference, User
-from app.schemas.notification import NotificationPrefsUpdate
+from app.schemas.notification import NotificationPreferencesResponse, NotificationPrefsUpdate
+
+
+async def get_notification_preferences(
+    session: AsyncSession,
+    *,
+    current_user: User,
+) -> NotificationPreferencesResponse:
+    preference = await session.get(NotificationPreference, current_user.id)
+    if preference is None:
+        return NotificationPreferencesResponse(
+            emailNotifications=True,
+            pushNotifications=True,
+            reminderBeforeBooking=True,
+            promotionalEmails=False,
+        )
+
+    return NotificationPreferencesResponse(
+        emailNotifications=preference.email_notifications,
+        pushNotifications=preference.push_notifications,
+        reminderBeforeBooking=preference.reminder_before_booking,
+        promotionalEmails=preference.promotional_emails,
+    )
 
 
 async def update_notification_preferences(

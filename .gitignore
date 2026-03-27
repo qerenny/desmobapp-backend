@@ -35,6 +35,8 @@ docs/*
 !docs/frontend_handoff.md
 !docs/postman_collection.json
 !docs/postman_environment.json
+!docs/manual_test_checklist.md
+!docs/implemented_backend_features.md
 
 # Logs
 *.log

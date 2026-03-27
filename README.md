@@ -73,6 +73,14 @@ make seed-demo
 
 `docs/frontend_handoff.md`
 
+Чек-лист для ручной проверки backend лежит в:
+
+`docs/manual_test_checklist.md`
+
+Сводка всего реализованного backend лежит в:
+
+`docs/implemented_backend_features.md`
+
 Postman-файлы для быстрого API flow:
 
 - `docs/postman_collection.json`

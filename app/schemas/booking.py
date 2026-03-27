@@ -34,3 +34,25 @@ class BookingResponse(BaseModel):
     createdAt: datetime
     updatedAt: datetime
     cancelledAt: datetime | None = None
+
+
+class BookingListItem(BaseModel):
+    id: UUID
+    status: BookingStatus
+    level: BookingLevel
+    seatId: UUID | None = None
+    roomId: UUID | None = None
+    venueId: UUID
+    startTime: datetime
+    endTime: datetime
+    priceAmountCents: int
+    priceCurrency: str
+    createdAt: datetime
+    cancelledAt: datetime | None = None
+
+
+class BookingListResponse(BaseModel):
+    items: list[BookingListItem]
+    page: int
+    limit: int
+    total: int

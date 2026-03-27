@@ -10,5 +10,8 @@ class NotificationPrefsUpdate(BaseModel):
     promotionalEmails: bool | None = None
 
 
-class MessageResponse(BaseModel):
-    message: str
+class NotificationPreferencesResponse(BaseModel):
+    emailNotifications: bool
+    pushNotifications: bool
+    reminderBeforeBooking: bool
+    promotionalEmails: bool

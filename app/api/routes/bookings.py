@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user
+from app.db.enums import BookingStatus
 from app.db.models import User
 from app.db.session import get_db_session
-from app.schemas.booking import BookingCreateRequest, BookingResponse
+from app.schemas.booking import BookingCreateRequest, BookingListResponse, BookingResponse
 from app.schemas.checkin import CheckinRequest, CheckinResponse
 from app.services.availability import AvailabilityNotFoundError, AvailabilityValidationError
 from app.services.booking import (
@@ -17,6 +19,7 @@ from app.services.booking import (
     cancel_booking,
     create_booking,
     get_booking,
+    list_bookings,
 )
 from app.services.checkin import CheckinNotFoundError, CheckinValidationError, create_checkin
 
@@ -49,6 +52,28 @@ async def get_booking_endpoint(
         return await get_booking(session, booking_id=bookingId, current_user=current_user)
     except BookingNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.get("/me/bookings", response_model=BookingListResponse, summary="List current user bookings")
+@router.get("/bookings", response_model=BookingListResponse, include_in_schema=False)
+async def list_bookings_endpoint(
+    status_filter: BookingStatus | None = Query(default=None, alias="status"),
+    date_from: date | None = Query(default=None, alias="dateFrom"),
+    date_to: date | None = Query(default=None, alias="dateTo"),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> BookingListResponse:
+    return await list_bookings(
+        session,
+        current_user=current_user,
+        status=status_filter,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.delete("/bookings/{bookingId}", status_code=status.HTTP_204_NO_CONTENT)

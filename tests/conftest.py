@@ -11,6 +11,7 @@ from app.db.models import (
     Booking,
     BookingRule,
     Checkin,
+    FavoriteVenue,
     FeatureLink,
     Hold,
     NotificationPreference,
@@ -61,11 +62,13 @@ async def _cleanup_test_data(session: AsyncSession) -> None:
         await session.execute(delete(Room).where(Room.id.in_(room_ids)))
 
     if venue_ids:
+        await session.execute(delete(FavoriteVenue).where(FavoriteVenue.venue_id.in_(venue_ids)))
         await session.execute(delete(BookingRule).where(BookingRule.venue_id.in_(venue_ids)))
         await session.execute(delete(FeatureLink).where(FeatureLink.venue_id.in_(venue_ids)))
         await session.execute(delete(Venue).where(Venue.id.in_(venue_ids)))
 
     if user_ids:
+        await session.execute(delete(FavoriteVenue).where(FavoriteVenue.user_id.in_(user_ids)))
         await session.execute(delete(NotificationPreference).where(NotificationPreference.user_id.in_(user_ids)))
         await session.execute(delete(RefreshToken).where(RefreshToken.user_id.in_(user_ids)))
         await session.execute(delete(UserRoleAssignment).where(UserRoleAssignment.user_id.in_(user_ids)))
