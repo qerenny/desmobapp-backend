@@ -37,6 +37,26 @@
 - `POST /favorites`
 - `DELETE /favorites/{venueId}`
 
+И уже реализован pre-admin `P2` блок:
+
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `GET /rooms/{roomId}`
+- `GET /features`
+- `GET /room-hours/{roomId}`
+- `GET /tariffs`
+- `GET /booking-rules/{scope}`
+- `GET /bookings/history`
+- `PATCH /bookings/{bookingId}/reschedule`
+- `POST /bookings/{bookingId}/repeat`
+- `GET /payments/{paymentId}`
+- `POST /payments/{paymentId}/capture`
+- `POST /payments/{paymentId}/refund`
+- `POST /payments/webhooks/{provider}`
+- `GET /notifications`
+- `POST /devices/push-tokens`
+- `DELETE /devices/push-tokens/{deviceId}`
+
 Дополнительно:
 
 - `/docs`
@@ -51,6 +71,8 @@
 - `analytics` сейчас базовая загрузка помещений, без сложной бизнес-аналитики
 - `favorites` сейчас только на уровне venue
 - logout сейчас ревокает session через `refreshToken`
+- password reset в dev-режиме возвращает `resetToken` прямо в response для удобства тестирования
+- Postman-коллекция сейчас полностью покрывает happy path `P0/P1`, а новый pre-admin `P2` блок лучше проверять через Swagger UI или отдельные ручные запросы
 
 ## 3. Быстрый запуск backend
 
@@ -225,12 +247,34 @@ Seats:
 Можно сделать экран моих бронирований:
 
 - `GET /me/bookings`
+- `GET /bookings/history`
+- `PATCH /bookings/{bookingId}/reschedule`
+- `POST /bookings/{bookingId}/repeat`
 
 Можно сделать экран избранного:
 
 - `GET /favorites`
 - `POST /favorites`
 - `DELETE /favorites/{venueId}`
+
+Можно сделать inbox и device registration:
+
+- `GET /notifications`
+- `POST /devices/push-tokens`
+- `DELETE /devices/push-tokens/{deviceId}`
+
+Можно сделать экран восстановления пароля:
+
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+
+Можно читать конфигурацию пространства для расширенных экранов:
+
+- `GET /rooms/{roomId}`
+- `GET /features`
+- `GET /room-hours/{roomId}`
+- `GET /tariffs`
+- `GET /booking-rules/{scope}`
 
 ### 7.5 Admin flow
 
@@ -430,12 +474,21 @@ make precommit-run
 Что умеет коллекция:
 
 - покрывать весь текущий `P0`-контракт из `swagger.yaml`, который реально нужен фронту
+- покрывать основной `P1` mobile flow
 - логинить `client` и `admin`
 - автоматически сохранять `accessToken`, `adminAccessToken`
 - автоматически сохранять `venueId`, `roomId`, `seatId`, `holdId`, `bookingId`, `transactionId`
 - автоматически считать `bookingDate`, `holdStartTime`, `holdEndTime` на следующий день
 - отдельно прогонять `Browse`, `Booking Flow`, `Admin`
 - запускать happy path без ручного копирования body и UUID между запросами
+
+Что пока удобнее тестировать отдельно через Swagger или ручные Postman tabs:
+
+- password reset
+- booking history / reschedule / repeat
+- notifications inbox и push devices
+- room/features/tariffs/booking-rules read API
+- payment `get/capture/refund/webhook` mock extensions
 
 Рекомендуемый порядок запуска в Postman:
 
@@ -455,9 +508,10 @@ make precommit-run
 
 Это ещё не готово для фронта, но будет полезно позже:
 
-- `refresh/logout/me`
-- список бронирований пользователя
 - управление пользователями и ролями
 - invites flow
+- админское управление room hours / tariffs / booking rules
+- админский booking calendar и status management
+- admin notifications send
 - более богатая аналитика
 - реальные платежи

@@ -120,6 +120,7 @@
 - password hashing
 - JWT access tokens
 - refresh tokens в БД
+- forgot/reset password flow
 - проверка `User.status`
 - RBAC roles and permissions
 - `client` роль назначается при регистрации
@@ -132,26 +133,57 @@
 - availability calculation
 - hold creation/cancel
 - booking creation/get/cancel
+- booking history
+- booking reschedule
+- repeat booking
 - hold to booking conversion
 - check-in
 - conflict detection между holds и bookings
 - учёт room hours
 - учёт booking rules
 
-## 6. Notifications
+## 6. Payments
+
+Реализовано:
+
+- `POST /payments`
+- `GET /payments/{paymentId}`
+- `POST /payments/{paymentId}/capture`
+- `POST /payments/{paymentId}/refund`
+- `POST /payments/webhooks/{provider}`
+
+Ограничение:
+
+- всё по-прежнему `mock only`
+
+## 7. Notifications
 
 Реализовано:
 
 - хранение notification preferences
 - чтение notification preferences
+- inbox `GET /notifications`
+- push device registration
+- удаление push device
+- создание notification records на booking/payment/auth события
 
 Пока не реализовано:
 
-- inbox `GET /notifications`
-- push device registration
 - delivery pipeline
+- реальные email/push провайдеры
+- background retries
 
-## 7. Favorites
+## 8. Space Configuration Read API
+
+Реализовано:
+
+- `GET /rooms/{roomId}`
+- `GET /features`
+- `GET /room-hours/{roomId}`
+- `GET /tariffs`
+- `GET /booking-rules/{scope}`
+
+## 9. Favorites
 
 Реализовано:
 
@@ -160,7 +192,7 @@
 - получение списка избранных venue
 - удаление venue из избранного
 
-## 8. Seed / Demo / Frontend Support
+## 10. Seed / Demo / Frontend Support
 
 Реализовано:
 
@@ -179,7 +211,7 @@
 - `docs/postman_collection.json`
 - `docs/postman_environment.json`
 
-## 9. Tests and Tooling
+## 11. Tests and Tooling
 
 Реализовано:
 
@@ -197,23 +229,27 @@
 - refresh / logout / me / notifications GET
 - bookings list
 - favorites
+- forgot/reset password
+- booking history / reschedule / repeat
+- notification inbox / push devices
+- room/features/tariffs/booking-rules read endpoints
+- payment get / capture / refund / webhook mock extensions
 
-## 10. What Is Still Next
+## 12. What Is Still Next
 
 Следующим этапом остаётся:
 
-- forgot/reset password
-- reschedule / repeat / booking history
-- payments capture/refund/webhooks mock extensions
-- notification inbox and push devices
 - admin users / roles / invites
 - room hours / tariffs / booking rules admin endpoints
+- admin notifications send
+- admin bookings list / calendar / status updates
 - richer analytics
 - audit log endpoints
 
-## 11. Current Known Constraints
+## 13. Current Known Constraints
 
 - payments работают только в mock-режиме
 - favorites пока только для venue
 - logout работает по `refreshToken`, а не по access token
-- `P1` сейчас закрывает user-facing mobile integration, а не весь ранее широкий набор админских расширений
+- password reset token в non-production сейчас возвращается в API-ответе для удобства разработки
+- delivery pipeline уведомлений пока не отправляет реальные email/push

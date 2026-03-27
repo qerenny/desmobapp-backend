@@ -96,6 +96,30 @@ Postman-файлы для быстрого API flow:
 
 Коллекция сама сохраняет токены и основные `id` из ответов.
 
+Что уже доступно сверх базового happy path:
+
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /me`
+- `PATCH /me`
+- `GET /me/bookings`
+- `GET /bookings/history`
+- `PATCH /bookings/{bookingId}/reschedule`
+- `POST /bookings/{bookingId}/repeat`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `GET /notifications`
+- `POST /devices/push-tokens`
+- `GET /rooms/{roomId}`
+- `GET /features`
+- `GET /room-hours/{roomId}`
+- `GET /tariffs`
+- `GET /booking-rules/{scope}`
+- `GET /payments/{paymentId}`
+- `POST /payments/{paymentId}/capture`
+- `POST /payments/{paymentId}/refund`
+- `POST /payments/webhooks/{provider}`
+
 Скрипт создаёт:
 
 - demo-аккаунты с разными ролями
@@ -116,6 +140,12 @@ It runs:
 - `compileall`
 - `ruff check`
 - `pytest -q`
+
+## Additional Settings
+
+In `.env.example` you can also tune:
+
+- `PASSWORD_RESET_TOKEN_EXPIRE_MINUTES`
 
 ## Project layout
 

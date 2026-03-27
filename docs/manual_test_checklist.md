@@ -7,6 +7,7 @@
 - проверить, что backend запускается
 - проверить, что все `P0`-эндпоинты из `docs/swagger.yaml` работают
 - проверить, что текущие `P1` user-facing эндпоинты работают
+- проверить, что текущие `P2` pre-admin эндпоинты работают
 - проверить happy path и основные негативные сценарии
 - проверить роли, авторизацию и mock-функциональность
 
@@ -546,6 +547,171 @@ Environment в Postman:
 - `DELETE` возвращает `204`
 - финальный `GET` больше не содержит этот venue
 
+## 7B. Проверка P2 pre-admin user flows
+
+### 7B.1 Forgot password
+
+Эндпоинт:
+
+- `POST /auth/forgot-password`
+
+Шаг:
+
+- отправить email существующего пользователя
+
+Ожидание:
+
+- статус `200`
+- в response есть `message`
+- в dev-режиме есть `resetToken`
+
+### 7B.2 Reset password
+
+Эндпоинт:
+
+- `POST /auth/reset-password`
+
+Шаг:
+
+1. взять `resetToken` из предыдущего шага
+2. отправить новый пароль
+3. попробовать `POST /auth/refresh` со старым refresh token
+4. выполнить `POST /auth/login` с новым паролем
+
+Ожидание:
+
+- reset возвращает `200`
+- старый refresh token больше не работает и даёт `401`
+- login с новым паролем возвращает `200`
+
+### 7B.3 Booking history
+
+Эндпоинт:
+
+- `GET /bookings/history`
+
+Шаг:
+
+1. создать booking
+2. отменить booking
+3. выполнить `GET /bookings/history`
+
+Ожидание:
+
+- статус `200`
+- в `items` присутствует отменённый booking
+
+### 7B.4 Reschedule booking
+
+Эндпоинт:
+
+- `PATCH /bookings/{bookingId}/reschedule`
+
+Шаг:
+
+- отправить новый `startTime/endTime` для активного booking
+
+Ожидание:
+
+- статус `200`
+- `startTime` и `endTime` изменились
+
+### 7B.5 Repeat booking
+
+Эндпоинт:
+
+- `POST /bookings/{bookingId}/repeat`
+
+Шаг:
+
+- отправить новый `startTime/endTime` для уже существующего booking
+
+Ожидание:
+
+- статус `200`
+- возвращается новый booking с новым `id`
+
+### 7B.6 Notification inbox
+
+Эндпоинт:
+
+- `GET /notifications`
+
+Шаг:
+
+- выполнить запрос после booking/payment/auth действий
+
+Ожидание:
+
+- статус `200`
+- есть `items`, `page`, `limit`, `total`
+- в `items` видны хотя бы события `booking_created` или `payment_captured`
+
+### 7B.7 Push devices
+
+Эндпоинты:
+
+- `POST /devices/push-tokens`
+- `DELETE /devices/push-tokens/{deviceId}`
+
+Шаг:
+
+1. зарегистрировать новый `pushToken`
+2. удалить созданный device
+
+Ожидание:
+
+- `POST` возвращает `201`
+- в response есть `id`
+- `DELETE` возвращает `204`
+
+### 7B.8 Space read-only configuration
+
+Эндпоинты:
+
+- `GET /rooms/{roomId}`
+- `GET /features`
+- `GET /room-hours/{roomId}`
+- `GET /tariffs`
+- `GET /booking-rules/{scope}`
+
+Шаг:
+
+- выполнить запросы для seeded demo-room
+
+Ожидание:
+
+- все ручки возвращают `200`
+- room содержит `seats`
+- `features` возвращает массив
+- `room-hours` возвращает расписание
+- `tariffs` возвращает массив тарифов или пустой массив, но без ошибки
+- `booking-rules` возвращает объект правил
+
+### 7B.9 Payment extensions
+
+Эндпоинты:
+
+- `GET /payments/{paymentId}`
+- `POST /payments/{paymentId}/capture`
+- `POST /payments/{paymentId}/refund`
+- `POST /payments/webhooks/{provider}`
+
+Шаг:
+
+1. создать mock payment через `POST /payments`
+2. получить payment по `id`
+3. выполнить `capture`
+4. выполнить `refund`
+5. отправить mock webhook
+
+Ожидание:
+
+- `GET` возвращает `200`
+- `capture` возвращает `200`
+- `refund` возвращает `200`
+- webhook возвращает `200`
+
 ## 8. Проверка auth и security
 
 ### 8.1 Register new user
@@ -717,7 +883,30 @@ Environment в Postman:
 - `DELETE /bookings/{bookingId}`
 - `POST /bookings/{bookingId}/checkin`
 - `POST /payments`
+- `GET /payments/{paymentId}`
+- `POST /payments/{paymentId}/capture`
+- `POST /payments/{paymentId}/refund`
+- `POST /payments/webhooks/{provider}`
 - `PUT /notifications/preferences`
+- `GET /notifications/preferences`
+- `GET /notifications`
+- `POST /devices/push-tokens`
+- `DELETE /devices/push-tokens/{deviceId}`
+- `GET /me`
+- `PATCH /me`
+- `GET /me/bookings`
+- `GET /bookings/history`
+- `PATCH /bookings/{bookingId}/reschedule`
+- `POST /bookings/{bookingId}/repeat`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `GET /rooms/{roomId}`
+- `GET /features`
+- `GET /room-hours/{roomId}`
+- `GET /tariffs`
+- `GET /booking-rules/{scope}`
 - `POST /admin/venues`
 - `PUT /admin/rooms/{roomId}/layout`
 - `GET /admin/analytics/occupancy`
@@ -733,9 +922,14 @@ Environment в Postman:
 - booking можно отменить
 - после отмены availability снова показывает слот свободным
 - refresh/logout работают корректно
+- forgot/reset password работают корректно
 - профиль пользователя читается и обновляется
 - список собственных bookings читается
+- history/reschedule/repeat работают
 - favorites flow работает
+- inbox уведомлений и push devices работают
+- read-only space config endpoints работают
+- payment mock extensions работают
 - клиент не может ходить в admin endpoints
 - admin может выполнять admin endpoints
 - негативные сценарии возвращают корректные `4xx`

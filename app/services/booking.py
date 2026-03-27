@@ -14,6 +14,7 @@ from app.schemas.booking import (
     BookingListItem,
     BookingListResponse,
     BookingResponse,
+    BookingWindowUpdateRequest,
 )
 from app.services.availability import (
     AvailabilityValidationError,
@@ -23,6 +24,7 @@ from app.services.availability import (
     _resolve_operating_hours,
     _resolve_resource,
 )
+from app.services.notification import create_notification_record
 
 
 class BookingConflictError(Exception):
@@ -74,6 +76,26 @@ def _serialize_booking_list_item(booking: Booking) -> BookingListItem:
         createdAt=booking.created_at,
         cancelledAt=booking.cancelled_at,
     )
+
+
+def _resource_kwargs_for_level(booking: Booking) -> dict:
+    if booking.level.value == "seat":
+        return {
+            "seat_id": booking.seat_id,
+            "room_id": None,
+            "venue_id": None,
+        }
+    if booking.level.value == "room":
+        return {
+            "seat_id": None,
+            "room_id": booking.room_id,
+            "venue_id": None,
+        }
+    return {
+        "seat_id": None,
+        "room_id": None,
+        "venue_id": booking.venue_id,
+    }
 
 
 async def _validate_booking_window(
@@ -204,10 +226,17 @@ async def create_booking(
         price_currency="RUB",
     )
     session.add(booking)
+    await session.flush()
 
     if hold is not None:
         hold.status = HoldStatus.CONVERTED
 
+    await create_notification_record(
+        session,
+        user_id=current_user.id,
+        template_code="booking_created",
+        payload={"bookingId": str(booking.id), "level": booking.level.value},
+    )
     await session.commit()
     await session.refresh(booking)
     return _serialize_booking(booking)
@@ -260,6 +289,110 @@ async def list_bookings(
     )
 
 
+async def list_booking_history(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    page: int,
+    limit: int,
+) -> BookingListResponse:
+    now = datetime.now(UTC)
+    stmt = select(Booking).where(
+        Booking.user_id == current_user.id,
+        (Booking.end_time < now)
+        | (Booking.status.in_([BookingStatus.CANCELLED, BookingStatus.COMPLETED, BookingStatus.NO_SHOW])),
+    )
+    total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    items = (
+        await session.scalars(
+            stmt.order_by(Booking.start_time.desc()).offset((page - 1) * limit).limit(limit)
+        )
+    ).all()
+
+    return BookingListResponse(
+        items=[_serialize_booking_list_item(item) for item in items],
+        page=page,
+        limit=limit,
+        total=total,
+    )
+
+
+async def reschedule_booking(
+    session: AsyncSession,
+    *,
+    booking_id: UUID,
+    current_user: User,
+    payload: BookingWindowUpdateRequest,
+) -> BookingResponse:
+    booking = await session.scalar(select(Booking).where(Booking.id == booking_id, Booking.user_id == current_user.id))
+    if booking is None:
+        raise BookingNotFoundError("Booking not found.")
+    if booking.status not in {BookingStatus.PENDING, BookingStatus.CONFIRMED}:
+        raise AvailabilityValidationError("Booking cannot be rescheduled in its current state.")
+
+    start_time = _ensure_utc(payload.startTime, field_name="startTime")
+    end_time = _ensure_utc(payload.endTime, field_name="endTime")
+    context = await _resolve_resource(
+        session,
+        level=booking.level,
+        **_resource_kwargs_for_level(booking),
+    )
+    _, _, requires_payment = await _validate_booking_window(
+        session,
+        context=context,
+        start_time=start_time,
+        end_time=end_time,
+    )
+
+    bookings, holds = await _load_conflicts(session, context, start_time, end_time)
+    blocking_bookings = [item for item in bookings if item.id != booking.id]
+    if any(_overlaps(start_time, end_time, item.start_time, item.end_time) for item in blocking_bookings):
+        raise BookingConflictError("Requested slot is not available.")
+    if any(_overlaps(start_time, end_time, item.start_time, item.end_time) for item in holds):
+        raise BookingConflictError("Requested slot is already on hold.")
+
+    booking.start_time = start_time
+    booking.end_time = end_time
+    booking.status = BookingStatus.PENDING if requires_payment else BookingStatus.CONFIRMED
+    await create_notification_record(
+        session,
+        user_id=current_user.id,
+        template_code="booking_rescheduled",
+        payload={"bookingId": str(booking.id)},
+    )
+    await session.commit()
+    await session.refresh(booking)
+    return _serialize_booking(booking)
+
+
+async def repeat_booking(
+    session: AsyncSession,
+    *,
+    booking_id: UUID,
+    current_user: User,
+    payload: BookingWindowUpdateRequest,
+) -> BookingResponse:
+    source_booking = await session.scalar(
+        select(Booking).where(Booking.id == booking_id, Booking.user_id == current_user.id)
+    )
+    if source_booking is None:
+        raise BookingNotFoundError("Booking not found.")
+
+    return await create_booking(
+        session,
+        current_user=current_user,
+        payload=BookingCreateRequest(
+            level=source_booking.level,
+            seatId=source_booking.seat_id if source_booking.level.value == "seat" else None,
+            roomId=source_booking.room_id if source_booking.level.value == "room" else None,
+            venueId=source_booking.venue_id if source_booking.level.value == "venue" else None,
+            holdId=None,
+            startTime=payload.startTime,
+            endTime=payload.endTime,
+        ),
+    )
+
+
 async def cancel_booking(
     session: AsyncSession,
     *,
@@ -273,4 +406,10 @@ async def cancel_booking(
     if booking.status != BookingStatus.CANCELLED:
         booking.status = BookingStatus.CANCELLED
         booking.cancelled_at = datetime.now(UTC)
+        await create_notification_record(
+            session,
+            user_id=current_user.id,
+            template_code="booking_cancelled",
+            payload={"bookingId": str(booking.id)},
+        )
         await session.commit()

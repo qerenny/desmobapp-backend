@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from secrets import token_urlsafe
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -14,16 +15,19 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
-from app.db.enums import UserStatus
-from app.db.models import RefreshToken, Role, User, UserRoleAssignment
+from app.db.enums import NotificationChannel, UserStatus
+from app.db.models import PasswordResetToken, RefreshToken, Role, User, UserRoleAssignment
 from app.schemas.auth import (
+    ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
     ProfileUpdateRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     UserProfile,
     UserPublic,
 )
+from app.services.notification import create_notification_record
 from app.services.rbac import get_user_permissions_context
 
 
@@ -170,6 +174,74 @@ async def logout_user_session(session: AsyncSession, *, refresh_token: str) -> N
         raise AuthTokenError("Invalid refresh token.")
 
     refresh_token_record.revoked_at = now
+    await session.commit()
+
+
+async def request_password_reset(session: AsyncSession, *, email: str) -> ForgotPasswordResponse:
+    user = await session.scalar(select(User).where(User.email == email.lower()))
+    if user is None or user.status != UserStatus.ACTIVE:
+        return ForgotPasswordResponse(message="If the account exists, password reset instructions were created.")
+
+    now = datetime.now(UTC)
+    reset_token = token_urlsafe(32)
+    session.add(
+        PasswordResetToken(
+            user_id=user.id,
+            token_hash=hash_token(reset_token),
+            expires_at=now + settings.password_reset_token_ttl,
+        )
+    )
+    await create_notification_record(
+        session,
+        user_id=user.id,
+        template_code="password_reset_requested",
+        payload={"email": user.email},
+        channel=NotificationChannel.EMAIL,
+    )
+    await session.commit()
+
+    return ForgotPasswordResponse(
+        message="If the account exists, password reset instructions were created.",
+        resetToken=reset_token if settings.app_env != "production" else None,
+    )
+
+
+async def reset_password(session: AsyncSession, *, payload: ResetPasswordRequest) -> None:
+    now = datetime.now(UTC)
+    reset_token = await session.scalar(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == hash_token(payload.token),
+            PasswordResetToken.used_at.is_(None),
+        )
+    )
+    if reset_token is None or reset_token.expires_at <= now:
+        raise AuthTokenError("Invalid or expired reset token.")
+
+    user = await session.get(User, reset_token.user_id)
+    if user is None or user.status != UserStatus.ACTIVE:
+        raise AuthForbiddenError("User is not active.")
+
+    user.password_hash = hash_password(payload.newPassword)
+    reset_token.used_at = now
+
+    refresh_tokens = (
+        await session.scalars(
+            select(RefreshToken).where(
+                RefreshToken.user_id == user.id,
+                RefreshToken.revoked_at.is_(None),
+            )
+        )
+    ).all()
+    for item in refresh_tokens:
+        item.revoked_at = now
+
+    await create_notification_record(
+        session,
+        user_id=user.id,
+        template_code="password_reset_completed",
+        payload={"email": user.email},
+        channel=NotificationChannel.EMAIL,
+    )
     await session.commit()
 
 

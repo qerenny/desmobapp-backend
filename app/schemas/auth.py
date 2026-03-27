@@ -57,3 +57,17 @@ class ProfileUpdateRequest(BaseModel):
         if self.name is None and self.phone is None:
             raise ValueError("At least one field must be provided.")
         return self
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    resetToken: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=16)
+    newPassword: str = Field(min_length=6)

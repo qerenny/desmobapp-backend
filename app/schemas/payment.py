@@ -31,3 +31,7 @@ class TransactionResponse(BaseModel):
     refundedAt: datetime | None = None
     createdAt: datetime
     updatedAt: datetime
+
+
+class PaymentRefundRequest(BaseModel):
+    amountCents: int | None = Field(default=None, ge=1)

@@ -10,7 +10,12 @@ from app.api.dependencies.auth import get_current_user
 from app.db.enums import BookingStatus
 from app.db.models import User
 from app.db.session import get_db_session
-from app.schemas.booking import BookingCreateRequest, BookingListResponse, BookingResponse
+from app.schemas.booking import (
+    BookingCreateRequest,
+    BookingListResponse,
+    BookingResponse,
+    BookingWindowUpdateRequest,
+)
 from app.schemas.checkin import CheckinRequest, CheckinResponse
 from app.services.availability import AvailabilityNotFoundError, AvailabilityValidationError
 from app.services.booking import (
@@ -19,7 +24,10 @@ from app.services.booking import (
     cancel_booking,
     create_booking,
     get_booking,
+    list_booking_history,
     list_bookings,
+    repeat_booking,
+    reschedule_booking,
 )
 from app.services.checkin import CheckinNotFoundError, CheckinValidationError, create_checkin
 
@@ -40,6 +48,21 @@ async def create_booking_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except BookingConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.get("/bookings/history", response_model=BookingListResponse, summary="List booking history")
+async def list_booking_history_endpoint(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> BookingListResponse:
+    return await list_booking_history(
+        session,
+        current_user=current_user,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/bookings/{bookingId}", response_model=BookingResponse)
@@ -74,6 +97,54 @@ async def list_bookings_endpoint(
         page=page,
         limit=limit,
     )
+
+
+@router.patch("/bookings/{bookingId}/reschedule", response_model=BookingResponse)
+async def reschedule_booking_endpoint(
+    bookingId: UUID,
+    payload: BookingWindowUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> BookingResponse:
+    try:
+        return await reschedule_booking(
+            session,
+            booking_id=bookingId,
+            current_user=current_user,
+            payload=payload,
+        )
+    except AvailabilityValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except AvailabilityNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except BookingNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except BookingConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.post("/bookings/{bookingId}/repeat", response_model=BookingResponse)
+async def repeat_booking_endpoint(
+    bookingId: UUID,
+    payload: BookingWindowUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> BookingResponse:
+    try:
+        return await repeat_booking(
+            session,
+            booking_id=bookingId,
+            current_user=current_user,
+            payload=payload,
+        )
+    except AvailabilityValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except AvailabilityNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except BookingNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except BookingConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.delete("/bookings/{bookingId}", status_code=status.HTTP_204_NO_CONTENT)

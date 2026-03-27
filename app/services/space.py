@@ -7,13 +7,17 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.enums import VenueStatus
-from app.db.models import Feature, FeatureLink, Room, Seat, Venue
+from app.db.models import BookingRule, Feature, FeatureLink, Room, RoomHour, Seat, Tariff, Venue
 from app.schemas.space import (
+    BookingRulePublic,
+    FeaturePublic,
     GeoPoint,
     RoomBrief,
     RoomFull,
+    RoomHourPublic,
     RoomLayoutUpdate,
     SeatBrief,
+    TariffPublic,
     VenueCreate,
     VenueFull,
     VenueListItem,
@@ -182,6 +186,127 @@ async def get_seats_by_room(session: AsyncSession, room_id: UUID) -> list[SeatBr
         )
         for seat in seats
     ]
+
+
+async def get_room(session: AsyncSession, room_id: UUID) -> RoomFull:
+    room = await session.get(Room, room_id)
+    if room is None:
+        raise SpaceNotFoundError("Room not found.")
+
+    seats = await get_seats_by_room(session, room_id)
+    room_feature_map = await _get_feature_map(session, room_ids=[room.id])
+    return RoomFull(
+        id=room.id,
+        name=room.name,
+        allowFullRoomBooking=room.allow_full_room_booking,
+        features=sorted(room_feature_map.get(str(room.id), [])),
+        gridWidth=room.grid_width,
+        gridHeight=room.grid_height,
+        seats=seats,
+    )
+
+
+async def list_features(session: AsyncSession) -> list[FeaturePublic]:
+    features = (await session.scalars(select(Feature).order_by(Feature.name))).all()
+    return [
+        FeaturePublic(
+            id=feature.id,
+            code=feature.code,
+            name=feature.name,
+            icon=feature.icon,
+        )
+        for feature in features
+    ]
+
+
+async def get_room_hours(session: AsyncSession, room_id: UUID) -> list[RoomHourPublic]:
+    room = await session.get(Room, room_id)
+    if room is None:
+        raise SpaceNotFoundError("Room not found.")
+
+    room_hours = (
+        await session.scalars(select(RoomHour).where(RoomHour.room_id == room_id).order_by(RoomHour.weekday))
+    ).all()
+    return [
+        RoomHourPublic(
+            weekday=item.weekday,
+            startLocalTime=item.start_local_time.isoformat() if item.start_local_time else None,
+            endLocalTime=item.end_local_time.isoformat() if item.end_local_time else None,
+            isClosed=item.is_closed,
+        )
+        for item in room_hours
+    ]
+
+
+async def list_tariffs(
+    session: AsyncSession,
+    *,
+    venue_id: UUID | None,
+    room_id: UUID | None,
+    seat_id: UUID | None,
+) -> list[TariffPublic]:
+    stmt = select(Tariff)
+    if venue_id is not None:
+        stmt = stmt.where(Tariff.venue_id == venue_id)
+    if room_id is not None:
+        stmt = stmt.where(Tariff.room_id == room_id)
+    if seat_id is not None:
+        stmt = stmt.where(Tariff.seat_id == seat_id)
+
+    tariffs = (await session.scalars(stmt.order_by(Tariff.active_from.desc().nullslast(), Tariff.id))).all()
+    return [
+        TariffPublic(
+            id=tariff.id,
+            venueId=tariff.venue_id,
+            roomId=tariff.room_id,
+            seatId=tariff.seat_id,
+            billingUnit=tariff.billing_unit,
+            priceAmountCents=tariff.price_amount_cents,
+            currency=tariff.currency,
+            activeFrom=tariff.active_from.isoformat() if tariff.active_from else None,
+            activeTo=tariff.active_to.isoformat() if tariff.active_to else None,
+            archivedAt=tariff.archived_at.isoformat() if tariff.archived_at else None,
+        )
+        for tariff in tariffs
+    ]
+
+
+async def get_booking_rule(
+    session: AsyncSession,
+    *,
+    scope: str,
+    venue_id: UUID | None,
+    room_id: UUID | None,
+) -> BookingRulePublic:
+    if scope not in {"venue", "room"}:
+        raise ValueError("scope must be either 'venue' or 'room'.")
+    if scope == "venue" and venue_id is None:
+        raise ValueError("venueId is required for venue scope.")
+    if scope == "room" and room_id is None:
+        raise ValueError("roomId is required for room scope.")
+
+    stmt = select(BookingRule)
+    if scope == "venue":
+        stmt = stmt.where(BookingRule.venue_id == venue_id, BookingRule.room_id.is_(None))
+    else:
+        stmt = stmt.where(BookingRule.room_id == room_id)
+
+    rule = await session.scalar(stmt.order_by(BookingRule.created_at.desc()))
+    if rule is None:
+        raise SpaceNotFoundError("Booking rule not found.")
+    return BookingRulePublic(
+        id=rule.id,
+        venueId=rule.venue_id,
+        roomId=rule.room_id,
+        minDurationMinutes=rule.min_duration_minutes,
+        maxDurationMinutes=rule.max_duration_minutes,
+        maxAdvanceDays=rule.max_advance_days,
+        cancellationDeadlineMinutes=rule.cancellation_deadline_minutes,
+        requiresPayment=rule.requires_payment,
+        holdTtlSeconds=rule.hold_ttl_seconds,
+        checkinOpenBeforeMinutes=rule.checkin_open_before_minutes,
+        geoRadiusMeters=rule.geo_radius_meters,
+    )
 
 
 async def create_venue(session: AsyncSession, payload: VenueCreate) -> VenueFull:

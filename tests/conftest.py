@@ -14,12 +14,16 @@ from app.db.models import (
     FavoriteVenue,
     FeatureLink,
     Hold,
+    Notification,
+    NotificationDevice,
     NotificationPreference,
+    PasswordResetToken,
     QRCode,
     RefreshToken,
     Room,
     RoomHour,
     Seat,
+    Tariff,
     Transaction,
     User,
     UserRoleAssignment,
@@ -51,6 +55,7 @@ async def _cleanup_test_data(session: AsyncSession) -> None:
         await session.execute(delete(Booking).where(Booking.id.in_(booking_ids)))
 
     if seat_ids:
+        await session.execute(delete(Tariff).where(Tariff.seat_id.in_(seat_ids)))
         await session.execute(delete(Hold).where(Hold.seat_id.in_(seat_ids)))
         await session.execute(delete(FeatureLink).where(FeatureLink.seat_id.in_(seat_ids)))
         await session.execute(delete(Seat).where(Seat.id.in_(seat_ids)))
@@ -58,18 +63,23 @@ async def _cleanup_test_data(session: AsyncSession) -> None:
     if room_ids:
         await session.execute(delete(RoomHour).where(RoomHour.room_id.in_(room_ids)))
         await session.execute(delete(BookingRule).where(BookingRule.room_id.in_(room_ids)))
+        await session.execute(delete(Tariff).where(Tariff.room_id.in_(room_ids)))
         await session.execute(delete(FeatureLink).where(FeatureLink.room_id.in_(room_ids)))
         await session.execute(delete(Room).where(Room.id.in_(room_ids)))
 
     if venue_ids:
         await session.execute(delete(FavoriteVenue).where(FavoriteVenue.venue_id.in_(venue_ids)))
         await session.execute(delete(BookingRule).where(BookingRule.venue_id.in_(venue_ids)))
+        await session.execute(delete(Tariff).where(Tariff.venue_id.in_(venue_ids)))
         await session.execute(delete(FeatureLink).where(FeatureLink.venue_id.in_(venue_ids)))
         await session.execute(delete(Venue).where(Venue.id.in_(venue_ids)))
 
     if user_ids:
+        await session.execute(delete(Notification).where(Notification.user_id.in_(user_ids)))
+        await session.execute(delete(NotificationDevice).where(NotificationDevice.user_id.in_(user_ids)))
         await session.execute(delete(FavoriteVenue).where(FavoriteVenue.user_id.in_(user_ids)))
         await session.execute(delete(NotificationPreference).where(NotificationPreference.user_id.in_(user_ids)))
+        await session.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id.in_(user_ids)))
         await session.execute(delete(RefreshToken).where(RefreshToken.user_id.in_(user_ids)))
         await session.execute(delete(UserRoleAssignment).where(UserRoleAssignment.user_id.in_(user_ids)))
         await session.execute(delete(User).where(User.id.in_(user_ids)))

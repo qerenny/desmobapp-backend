@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.enums import BookingStatus, CheckinMethod
 from app.db.models import Booking, Checkin, User
 from app.schemas.checkin import CheckinLocation, CheckinRequest, CheckinResponse
+from app.services.notification import create_notification_record
 
 
 class CheckinValidationError(Exception):
@@ -60,6 +61,12 @@ async def create_checkin(
     )
     booking.status = BookingStatus.CHECKED_IN
     session.add(checkin)
+    await create_notification_record(
+        session,
+        user_id=current_user.id,
+        template_code="booking_checked_in",
+        payload={"bookingId": str(booking.id)},
+    )
     await session.commit()
     await session.refresh(checkin)
     return _serialize_checkin(checkin)

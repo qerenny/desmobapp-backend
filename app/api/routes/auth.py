@@ -5,11 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
 from app.schemas.auth import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
     LogoutRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     UserPublic,
 )
 from app.schemas.common import MessageResponse
@@ -22,6 +25,8 @@ from app.services.auth import (
     logout_user_session,
     refresh_user_session,
     register_user,
+    request_password_reset,
+    reset_password,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -79,3 +84,33 @@ async def logout(
     except AuthTokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     return MessageResponse(message="Logged out successfully.")
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+    summary="Start password reset flow",
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ForgotPasswordResponse:
+    return await request_password_reset(session, email=payload.email)
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Reset password with token",
+)
+async def reset_password_endpoint(
+    payload: ResetPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> MessageResponse:
+    try:
+        await reset_password(session, payload=payload)
+    except AuthTokenError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except AuthForbiddenError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    return MessageResponse(message="Password was reset successfully.")

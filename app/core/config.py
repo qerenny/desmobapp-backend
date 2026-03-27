@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me", alias="SECRET_KEY")
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=14, alias="REFRESH_TOKEN_EXPIRE_DAYS")
+    password_reset_token_expire_minutes: int = Field(default=60, alias="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES")
     hold_ttl_seconds: int = Field(default=900, alias="HOLD_TTL_SECONDS")
 
     model_config = SettingsConfigDict(
@@ -60,6 +61,10 @@ class Settings(BaseSettings):
     @property
     def refresh_token_ttl(self) -> timedelta:
         return timedelta(days=self.refresh_token_expire_days)
+
+    @property
+    def password_reset_token_ttl(self) -> timedelta:
+        return timedelta(minutes=self.password_reset_token_expire_minutes)
 
     @property
     def cors_origins(self) -> list[str]:

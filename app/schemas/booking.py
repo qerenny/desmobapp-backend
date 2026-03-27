@@ -56,3 +56,8 @@ class BookingListResponse(BaseModel):
     page: int
     limit: int
     total: int
+
+
+class BookingWindowUpdateRequest(BaseModel):
+    startTime: datetime
+    endTime: datetime
