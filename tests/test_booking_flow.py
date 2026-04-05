@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from uuid import uuid4
 
 import pytest
@@ -88,6 +88,10 @@ async def test_booking_flow_checkin_payment_notifications_and_analytics(
     db_session.add(room)
     await db_session.flush()
 
+    target_date = datetime.now(UTC).date() + timedelta(days=7)
+    start_time = datetime.combine(target_date, time(7, 0), tzinfo=UTC)
+    end_time = datetime.combine(target_date, time(8, 0), tzinfo=UTC)
+
     seat = Seat(
         room_id=room.id,
         label="B-1",
@@ -101,7 +105,7 @@ async def test_booking_flow_checkin_payment_notifications_and_analytics(
     db_session.add(
         RoomHour(
             room_id=room.id,
-            weekday=0,
+            weekday=target_date.weekday(),
             start_local_time=time(9, 0),
             end_local_time=time(12, 0),
             is_closed=False,
@@ -126,10 +130,6 @@ async def test_booking_flow_checkin_payment_notifications_and_analytics(
 
     client_headers = {"Authorization": f"Bearer {client_login['accessToken']}"}
     admin_headers = {"Authorization": f"Bearer {admin_login['accessToken']}"}
-
-    target_date = date(2026, 3, 30)
-    start_time = datetime(2026, 3, 30, 7, 0, tzinfo=UTC)
-    end_time = datetime(2026, 3, 30, 8, 0, tzinfo=UTC)
 
     availability_response = await client.get(
         "/availability",

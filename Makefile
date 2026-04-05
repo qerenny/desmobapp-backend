@@ -5,7 +5,7 @@ UVICORN_PORT ?= 8000
 APP_MODULE ?= app.main:app
 PRE_COMMIT_HOME ?= .cache/pre-commit
 
-.PHONY: install up down run migrate seed-rbac seed-demo compile lint lint-fix test check precommit-install precommit-run
+.PHONY: install up down run migrate seed-rbac seed-demo seed-tariffs compile lint lint-fix test check precommit-install precommit-run
 
 install:
 	$(POETRY) install
@@ -27,6 +27,9 @@ seed-rbac:
 
 seed-demo:
 	$(POETRY) run python -m app.scripts.seed_demo
+
+seed-tariffs:
+	$(POETRY) run python -m app.scripts.seed_tariffs
 
 compile:
 	$(PYTHON) -m compileall app tests alembic

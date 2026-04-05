@@ -126,6 +126,12 @@ Postman-файлы для быстрого API flow:
 - готовое demo venue
 - комнаты, места, room hours и booking rules
 
+Для заполнения таблицы `tariffs` отдельным сидом:
+
+```bash
+make seed-tariffs
+```
+
 Единый пароль для demo-аккаунтов:
 
 `demo12345`
